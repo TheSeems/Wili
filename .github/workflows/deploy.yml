@@ -47,7 +47,7 @@ jobs:
     #    cd frontend
     #    pnpm install --no-frozen-lockfile
 
-  build-and-deploy:
+  build:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -99,6 +99,27 @@ jobs:
         docker push $YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }}
         docker push $YC_REGISTRY/$YC_REGISTRY_ID/frontend:latest
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Yandex Cloud CLI
+      run: |
+        curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+        echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
+
+    - name: Configure Yandex Cloud CLI
+      run: |
+        echo '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > /tmp/key.json
+        yc config set service-account-key /tmp/key.json
+        yc config set cloud-id ${{ secrets.YC_CLOUD_ID }}
+        yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
+        rm /tmp/key.json
+
     - name: Install kubectl
       run: |
         curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -119,6 +140,16 @@ jobs:
         
         # Update frontend image
         sed -i "s|cr.yandex/YOUR_REGISTRY_ID/frontend:latest|$YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }}|g" k8s/frontend.yaml
+
+    - name: Install cert-manager
+      run: |
+        # Install cert-manager
+        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
+        
+        # Wait for cert-manager to be ready
+        kubectl wait --for=condition=available --timeout=300s deployment/cert-manager -n cert-manager
+        kubectl wait --for=condition=available --timeout=300s deployment/cert-manager-cainjector -n cert-manager
+        kubectl wait --for=condition=available --timeout=300s deployment/cert-manager-webhook -n cert-manager
 
     - name: Deploy to Kubernetes
       run: |
@@ -153,13 +184,13 @@ jobs:
         kubectl get ingress -n wili
 
   notify:
-    needs: [build-and-deploy]
+    needs: [deploy]
     runs-on: ubuntu-latest
     if: always()
     steps:
     - name: Notify Deployment Status
       run: |
-        if [ "${{ needs.build-and-deploy.result }}" == "success" ]; then
+        if [ "${{ needs.deploy.result }}" == "success" ]; then
           echo "✅ Deployment successful! Check https://wili.me"
         else
           echo "❌ Deployment failed!"

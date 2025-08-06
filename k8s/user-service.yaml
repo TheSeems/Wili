@@ -9,6 +9,7 @@ data:
   DB_PORT: "5432"
   DB_NAME: "userdb"
   DB_USER: "postgres"
+  DATABASE_URL: "postgres://postgres:postgres@postgres-service:5432/userdb?sslmode=disable"
 
 ---
 apiVersion: v1
@@ -28,7 +29,7 @@ metadata:
   name: user-service
   namespace: wili
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: user-service
@@ -48,6 +49,11 @@ spec:
             configMapKeyRef:
               name: user-service-config
               key: PORT
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: user-service-config
+              key: DATABASE_URL
         - name: DB_HOST
           valueFrom:
             configMapKeyRef:

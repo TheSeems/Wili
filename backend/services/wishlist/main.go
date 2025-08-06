@@ -15,7 +15,7 @@ import (
 func main() {
 	// Initialize logger
 	logger := NewLogger("WISHLIST")
-	
+
 	log.Printf("Starting Wili Wishlist Service...")
 
 	// Load environment variables
@@ -24,9 +24,19 @@ func main() {
 	}
 
 	// Get environment variables with defaults
-	mongoURI := getEnv("MONGODB_URI", "mongodb://localhost:27017")
-	dbName := getEnv("DATABASE_NAME", "wili_wishlist")
-	userServiceURL := getEnv("USER_SERVICE_URL", "http://localhost:8080")
+	mongoURI := getEnv("MONGODB_URI", "")
+	if mongoURI == "" {
+		panic("MONGODB_URI is not set")
+	}
+	dbName := getEnv("DATABASE_NAME", "")
+	if dbName == "" {
+		panic("DATABASE_NAME is not set")
+	}
+	userServiceURL := getEnv("USER_SERVICE_URL", "")
+	if userServiceURL == "" {
+		panic("USER_SERVICE_URL is not set")
+	}
+
 	addr := getEnv("PORT", ":8081")
 
 	// Initialize MongoDB repository

@@ -8,6 +8,8 @@ data:
   MONGO_HOST: "mongodb-service"
   MONGO_PORT: "27017"
   MONGO_DATABASE: "wishlistdb"
+  DATABASE_NAME: "wishlistdb"
+  MONGODB_URI: "mongodb://admin:password@mongodb-service:27017/wishlistdb?authSource=admin"
   USER_SERVICE_URL: "http://user-service"
 
 ---
@@ -28,7 +30,7 @@ metadata:
   name: wishlist-service
   namespace: wili
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: wishlist-service
@@ -78,6 +80,16 @@ spec:
             configMapKeyRef:
               name: wishlist-service-config
               key: USER_SERVICE_URL
+        - name: MONGODB_URI
+          valueFrom:
+            configMapKeyRef:
+              name: wishlist-service-config
+              key: MONGODB_URI
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: wishlist-service-config
+              key: DATABASE_NAME
         resources:
           requests:
             memory: "128Mi"
