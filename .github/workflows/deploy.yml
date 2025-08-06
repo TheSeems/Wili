@@ -1,0 +1,167 @@
+name: Deploy to Yandex Cloud
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  YC_REGISTRY: cr.yandex
+  YC_REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
+  YC_CLUSTER_NAME: ${{ secrets.YC_CLUSTER_NAME }}
+  YC_CLUSTER_ID: ${{ secrets.YC_CLUSTER_ID }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24.5'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+
+    - name: Test Backend Services
+      run: |
+        cd backend/services/user
+        go test ./...
+        cd ../wishlist
+        go test ./...
+
+    #- name: Test Frontend
+    #  env:
+    #    PUBLIC_API_BASE_URL: https://api.wili.me
+    #  run: |
+    #    cd frontend
+    #    pnpm install --no-frozen-lockfile
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Install Yandex Cloud CLI
+      run: |
+        curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+        echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
+
+    - name: Configure Yandex Cloud CLI
+      run: |
+        echo '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > /tmp/key.json
+        yc config set service-account-key /tmp/key.json
+        yc config set cloud-id ${{ secrets.YC_CLOUD_ID }}
+        yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
+        rm /tmp/key.json
+
+    - name: Configure Docker for Yandex Container Registry
+      run: |
+        yc container registry configure-docker
+
+    - name: Build and Push User Service
+      run: |
+        cd backend
+        docker build -f services/user/Dockerfile -t $YC_REGISTRY/$YC_REGISTRY_ID/user-service:${{ github.sha }} .
+        docker tag $YC_REGISTRY/$YC_REGISTRY_ID/user-service:${{ github.sha }} $YC_REGISTRY/$YC_REGISTRY_ID/user-service:latest
+        docker push $YC_REGISTRY/$YC_REGISTRY_ID/user-service:${{ github.sha }}
+        docker push $YC_REGISTRY/$YC_REGISTRY_ID/user-service:latest
+
+    - name: Build and Push Wishlist Service
+      run: |
+        cd backend
+        docker build -f services/wishlist/Dockerfile -t $YC_REGISTRY/$YC_REGISTRY_ID/wishlist-service:${{ github.sha }} .
+        docker tag $YC_REGISTRY/$YC_REGISTRY_ID/wishlist-service:${{ github.sha }} $YC_REGISTRY/$YC_REGISTRY_ID/wishlist-service:latest
+        docker push $YC_REGISTRY/$YC_REGISTRY_ID/wishlist-service:${{ github.sha }}
+        docker push $YC_REGISTRY/$YC_REGISTRY_ID/wishlist-service:latest
+
+    - name: Build and Push Frontend
+      run: |
+        cd frontend
+        docker build --build-arg PUBLIC_API_BASE_URL=https://api.wili.me -t $YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }} .
+        docker tag $YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }} $YC_REGISTRY/$YC_REGISTRY_ID/frontend:latest
+        docker push $YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }}
+        docker push $YC_REGISTRY/$YC_REGISTRY_ID/frontend:latest
+
+    - name: Install kubectl
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
+
+    - name: Configure kubectl for Yandex Managed Kubernetes
+      run: |
+        yc managed-kubernetes cluster get-credentials $YC_CLUSTER_ID --external
+
+    - name: Update Kubernetes manifests with new image tags
+      run: |
+        # Update user service image
+        sed -i "s|cr.yandex/YOUR_REGISTRY_ID/user-service:latest|$YC_REGISTRY/$YC_REGISTRY_ID/user-service:${{ github.sha }}|g" k8s/user-service.yaml
+        
+        # Update wishlist service image
+        sed -i "s|cr.yandex/YOUR_REGISTRY_ID/wishlist-service:latest|$YC_REGISTRY/$YC_REGISTRY_ID/wishlist-service:${{ github.sha }}|g" k8s/wishlist-service.yaml
+        
+        # Update frontend image
+        sed -i "s|cr.yandex/YOUR_REGISTRY_ID/frontend:latest|$YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }}|g" k8s/frontend.yaml
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Apply namespace first
+        kubectl apply -f k8s/namespace.yaml
+        
+        # Apply databases
+        kubectl apply -f k8s/postgres.yaml
+        kubectl apply -f k8s/mongodb.yaml
+        
+        # Wait for databases to be ready
+        kubectl wait --for=condition=available --timeout=300s deployment/postgres -n wili
+        kubectl wait --for=condition=available --timeout=300s deployment/mongodb -n wili
+        
+        # Apply services
+        kubectl apply -f k8s/user-service.yaml
+        kubectl apply -f k8s/wishlist-service.yaml
+        kubectl apply -f k8s/frontend.yaml
+        
+        # Apply ingress
+        kubectl apply -f k8s/ingress.yaml
+        
+        # Wait for deployments to be ready
+        kubectl wait --for=condition=available --timeout=300s deployment/user-service -n wili
+        kubectl wait --for=condition=available --timeout=300s deployment/wishlist-service -n wili
+        kubectl wait --for=condition=available --timeout=300s deployment/frontend -n wili
+
+    - name: Verify Deployment
+      run: |
+        kubectl get pods -n wili
+        kubectl get services -n wili
+        kubectl get ingress -n wili
+
+  notify:
+    needs: [build-and-deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: Notify Deployment Status
+      run: |
+        if [ "${{ needs.build-and-deploy.result }}" == "success" ]; then
+          echo "✅ Deployment successful! Check https://wili.me"
+        else
+          echo "❌ Deployment failed!"
+          exit 1
+        fi

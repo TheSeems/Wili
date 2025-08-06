@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { PUBLIC_API_BASE_URL } from '$env/static/public';
 import type { components } from '$lib/api/generated/wishlist-api';
 
 type Wishlist = components['schemas']['Wishlist'];
@@ -13,9 +14,7 @@ export class WishlistApiClient {
 
 	constructor(baseUrl?: string) {
 		// Use provided baseUrl, or get from environment, or fallback to localhost
-		this.baseUrl = baseUrl || 
-			(browser ? import.meta.env.VITE_WISHLIST_API_URL : '') || 
-			'http://localhost:8081';
+		this.baseUrl = baseUrl || 'http://localhost:8081';
 	}
 
 	private async request<T>(
@@ -105,4 +104,4 @@ export class WishlistApiClient {
 }
 
 // Default client instance
-export const wishlistApi = new WishlistApiClient();
+export const wishlistApi = new WishlistApiClient(PUBLIC_API_BASE_URL);

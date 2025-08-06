@@ -1,4 +1,4 @@
-import { PUBLIC_API_BASE } from '$env/static/public';
+import { PUBLIC_API_BASE_URL } from '$env/static/public';
 import { browser } from '$app/environment';
 import { authStore } from './stores/auth';
 import type { components } from '$lib/api/generated/users-api';
@@ -53,7 +53,7 @@ export function redirectToYandex() {
 
 export async function exchangeCode(code: string) {
 	const body = { code };
-	const res = await fetch(`${PUBLIC_API_BASE}/auth/yandex`, {
+			const res = await fetch(`${PUBLIC_API_BASE_URL}/auth/yandex`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(body)

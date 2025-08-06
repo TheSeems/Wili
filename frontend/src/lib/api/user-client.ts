@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { PUBLIC_API_BASE_URL } from '$env/static/public';
 import type { components } from '$lib/api/generated/users-api';
 
 type User = components['schemas']['User'];
@@ -11,9 +12,7 @@ export class UserApiClient {
 
 	constructor(baseUrl?: string) {
 		// Use provided baseUrl, or get from environment, or fallback to localhost
-		this.baseUrl = baseUrl || 
-			(browser ? import.meta.env.VITE_USER_API_URL : '') || 
-			'http://localhost:8080';
+		this.baseUrl = baseUrl || 'http://localhost:8080';
 	}
 
 	private async request<T>(
@@ -70,4 +69,4 @@ export class UserApiClient {
 }
 
 // Default client instance
-export const userApi = new UserApiClient();
+export const userApi = new UserApiClient(PUBLIC_API_BASE_URL);
