@@ -1,0 +1,6 @@
+package: wishlist_server
+generate:
+  chi-server: true
+  models: true
+output-options:
+  skip-prune: true

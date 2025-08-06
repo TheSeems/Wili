@@ -1,0 +1,377 @@
+openapi: 3.0.3
+info:
+  title: Wili Wishlist Service API
+  version: 0.1.0
+  description: |
+    The Wishlist Service manages user wishlists and their items.
+    Items in a wishlist are modeled as extensible content pieces so that
+    new item types (e.g., marketplace SKUs) can be added without breaking
+    existing clients.
+
+servers:
+  - url: http://localhost:8081
+    description: Localhost service endpoint
+  - url: http://wishlist-service:8081
+    description: Internal service endpoint
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Wishlists
+    description: Operations on wishlists
+  - name: WishlistItems
+    description: Operations on items within a wishlist
+
+paths:
+  /wishlists:
+    get:
+      summary: List wishlists of the authenticated user
+      tags: [Wishlists]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Array of wishlists belonging to authenticated user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Wishlist'
+        "401":
+          description: Missing or invalid JWT
+    post:
+      summary: Create a new wishlist for the authenticated user
+      tags: [Wishlists]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWishlistRequest'
+      responses:
+        "201":
+          description: Wishlist created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wishlist'
+        "400":
+          description: Invalid input or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        "401":
+          description: Missing or invalid JWT
+
+  /wishlists/{wishlistId}:
+    parameters:
+      - name: wishlistId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get a wishlist by ID (public endpoint)
+      tags: [Wishlists]
+      responses:
+        "200":
+          description: Wishlist details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wishlist'
+        "404":
+          description: Wishlist not found
+    put:
+      summary: Update a wishlist (owner only)
+      tags: [Wishlists]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWishlistRequest'
+      responses:
+        "200":
+          description: Wishlist updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wishlist'
+        "400":
+          description: Invalid input or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        "401":
+          description: Unauthorized or ownership mismatch
+        "404":
+          description: Wishlist not found
+    delete:
+      summary: Delete a wishlist (owner only)
+      tags: [Wishlists]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Wishlist deleted
+        "401":
+          description: Unauthorized or ownership mismatch
+        "404":
+          description: Wishlist not found
+
+  /wishlists/{wishlistId}/items:
+    post:
+      summary: Add an item to a wishlist (owner only)
+      tags: [WishlistItems]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: wishlistId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWishlistItemRequest'
+      responses:
+        "201":
+          description: Item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WishlistItem'
+        "400":
+          description: Invalid input or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        "401":
+          description: Unauthorized
+        "404":
+          description: Wishlist not found
+
+  /wishlists/{wishlistId}/items/{itemId}:
+    parameters:
+      - name: wishlistId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      summary: Update a wishlist item (owner only)
+      tags: [WishlistItems]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWishlistItemRequest'
+      responses:
+        "200":
+          description: Updated item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WishlistItem'
+        "400":
+          description: Invalid input or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        "401":
+          description: Unauthorized
+        "404":
+          description: Item not found
+    delete:
+      summary: Remove an item from a wishlist (owner only)
+      tags: [WishlistItems]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Item deleted
+        "401":
+          description: Unauthorized
+        "404":
+          description: Item not found
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    # Wishlist core
+    Wishlist:
+      type: object
+      required: [id, userId, title, items, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WishlistItem'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateWishlistRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Wishlist title
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+          description: Optional wishlist description
+
+    UpdateWishlistRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Updated wishlist title
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+          description: Updated wishlist description
+
+    # Items
+    WishlistItem:
+      type: object
+      required: [id, type, data]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Discriminator for item type (e.g., "text", "marketplace")
+        data:
+          $ref: '#/components/schemas/WishlistItemData'
+
+
+          format: date-time
+
+    CreateWishlistItemRequest:
+      type: object
+      required: [type, data]
+      properties:
+        type:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Item type discriminator
+        data:
+          $ref: '#/components/schemas/WishlistItemData'
+
+    # Item data structure
+    WishlistItemData:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 300
+          description: Name of the wishlist item
+        description:
+          type: string
+          maxLength: 2000
+          description: Optional description of the wishlist item
+        url:
+          type: string
+          format: uri
+          description: Optional URL associated with the item
+      additionalProperties: true
+      description: |
+        Item-specific data payload. All items must have a name.
+        Description and other properties are optional to support different item types
+        (e.g., marketplace items with SKU, price, etc.).
+
+    UpdateWishlistItemRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Updated item type discriminator
+        data:
+          $ref: '#/components/schemas/WishlistItemData'
+
+    # Error responses
+    ValidationErrorResponse:
+      type: object
+      required: [error, details]
+      properties:
+        error:
+          type: string
+          description: General error message
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          description: Detailed validation errors
+
+    ValidationError:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          description: Name of the field that failed validation
+        message:
+          type: string
+          description: Detailed error message for the field
+

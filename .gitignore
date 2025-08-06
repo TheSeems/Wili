@@ -1,0 +1,11 @@
+.env
+!.env.example
+
+# macOS
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.idea/
+.vscode/
+.42c/

@@ -1,0 +1,219 @@
+package main
+
+import (
+	"fmt"
+	"strings"
+	"unicode/utf8"
+
+	wishlistgen "github.com/theseems/wili/backend/services/wishlist/gen"
+)
+
+// Validation constants
+const (
+	MaxWishlistTitleLength       = 200
+	MaxWishlistDescriptionLength = 2000
+	MaxItemNameLength            = 300
+	MaxItemDescriptionLength     = 2000
+	MinItemNameLength            = 1
+	MinWishlistTitleLength       = 1
+)
+
+// ValidationError represents a validation error with field-specific details
+type ValidationError struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
+func (v ValidationError) Error() string {
+	return fmt.Sprintf("validation error on field '%s': %s", v.Field, v.Message)
+}
+
+// ValidationErrors represents multiple validation errors
+type ValidationErrors []ValidationError
+
+func (v ValidationErrors) Error() string {
+	if len(v) == 0 {
+		return "no validation errors"
+	}
+	
+	var messages []string
+	for _, err := range v {
+		messages = append(messages, err.Error())
+	}
+	return strings.Join(messages, "; ")
+}
+
+// ValidateCreateWishlistRequest validates a create wishlist request
+func ValidateCreateWishlistRequest(req wishlistgen.CreateWishlistRequest) ValidationErrors {
+	var errors ValidationErrors
+
+	// Validate title
+	if err := validateStringField("title", req.Title, MinWishlistTitleLength, MaxWishlistTitleLength, true); err != nil {
+		errors = append(errors, *err)
+	}
+
+	// Validate description if provided
+	if req.Description != nil {
+		if err := validateStringField("description", *req.Description, 0, MaxWishlistDescriptionLength, false); err != nil {
+			errors = append(errors, *err)
+		}
+	}
+
+	return errors
+}
+
+// ValidateUpdateWishlistRequest validates an update wishlist request
+func ValidateUpdateWishlistRequest(req wishlistgen.UpdateWishlistRequest) ValidationErrors {
+	var errors ValidationErrors
+
+	// Validate title if provided
+	if req.Title != nil {
+		if err := validateStringField("title", *req.Title, MinWishlistTitleLength, MaxWishlistTitleLength, true); err != nil {
+			errors = append(errors, *err)
+		}
+	}
+
+	// Validate description if provided
+	if req.Description != nil {
+		if err := validateStringField("description", *req.Description, 0, MaxWishlistDescriptionLength, false); err != nil {
+			errors = append(errors, *err)
+		}
+	}
+
+	return errors
+}
+
+// ValidateCreateWishlistItemRequest validates a create wishlist item request
+func ValidateCreateWishlistItemRequest(req wishlistgen.CreateWishlistItemRequest) ValidationErrors {
+	var errors ValidationErrors
+
+	// Validate type
+	if err := validateStringField("type", req.Type, 1, 50, true); err != nil {
+		errors = append(errors, *err)
+	}
+
+	// Validate data payload
+	if dataErrors := validateItemData(req.Data); len(dataErrors) > 0 {
+		errors = append(errors, dataErrors...)
+	}
+
+	return errors
+}
+
+// ValidateUpdateWishlistItemRequest validates an update wishlist item request
+func ValidateUpdateWishlistItemRequest(req wishlistgen.UpdateWishlistItemRequest) ValidationErrors {
+	var errors ValidationErrors
+
+	// Validate type if provided
+	if req.Type != nil {
+		if err := validateStringField("type", *req.Type, 1, 50, true); err != nil {
+			errors = append(errors, *err)
+		}
+	}
+
+	// Validate data payload if provided
+	if req.Data != nil {
+		if dataErrors := validateItemData(*req.Data); len(dataErrors) > 0 {
+			errors = append(errors, dataErrors...)
+		}
+	}
+
+	return errors
+}
+
+// validateItemData validates the item data payload structure
+func validateItemData(data map[string]interface{}) ValidationErrors {
+	var errors ValidationErrors
+
+	// Check if name exists and is a string
+	nameRaw, hasName := data["name"]
+	if !hasName {
+		errors = append(errors, ValidationError{
+			Field:   "data.name",
+			Message: "name is required in item data",
+		})
+	} else {
+		nameStr, isString := nameRaw.(string)
+		if !isString {
+			errors = append(errors, ValidationError{
+				Field:   "data.name",
+				Message: "name must be a string",
+			})
+		} else {
+			if err := validateStringField("data.name", nameStr, MinItemNameLength, MaxItemNameLength, true); err != nil {
+				errors = append(errors, *err)
+			}
+		}
+	}
+
+	// Check if description exists and is a string (description is optional)
+	descRaw, hasDesc := data["description"]
+	if hasDesc {
+		descStr, isString := descRaw.(string)
+		if !isString {
+			errors = append(errors, ValidationError{
+				Field:   "data.description",
+				Message: "description must be a string",
+			})
+		} else {
+			if err := validateStringField("data.description", descStr, 0, MaxItemDescriptionLength, false); err != nil {
+				errors = append(errors, *err)
+			}
+		}
+	}
+
+	// Validate any additional fields based on item type
+	// For now, we allow additional fields but validate known ones
+	if urlRaw, hasURL := data["url"]; hasURL {
+		if urlStr, isString := urlRaw.(string); isString && urlStr != "" {
+			if !isValidURL(urlStr) {
+				errors = append(errors, ValidationError{
+					Field:   "data.url",
+					Message: "url must be a valid HTTP/HTTPS URL",
+				})
+			}
+		}
+	}
+
+	return errors
+}
+
+// validateStringField validates a string field with length constraints
+func validateStringField(fieldName, value string, minLength, maxLength int, required bool) *ValidationError {
+	// Check if field is required
+	if required && strings.TrimSpace(value) == "" {
+		return &ValidationError{
+			Field:   fieldName,
+			Message: "field is required and cannot be empty",
+		}
+	}
+
+	// If field is not required and empty, skip further validation
+	if !required && strings.TrimSpace(value) == "" {
+		return nil
+	}
+
+	// Check minimum length
+	if minLength > 0 && utf8.RuneCountInString(value) < minLength {
+		return &ValidationError{
+			Field:   fieldName,
+			Message: fmt.Sprintf("must be at least %d characters long", minLength),
+		}
+	}
+
+	// Check maximum length
+	if maxLength > 0 && utf8.RuneCountInString(value) > maxLength {
+		return &ValidationError{
+			Field:   fieldName,
+			Message: fmt.Sprintf("must not exceed %d characters", maxLength),
+		}
+	}
+
+	return nil
+}
+
+// isValidURL performs basic URL validation
+func isValidURL(urlStr string) bool {
+	urlStr = strings.TrimSpace(urlStr)
+	return strings.HasPrefix(urlStr, "http://") || strings.HasPrefix(urlStr, "https://")
+}

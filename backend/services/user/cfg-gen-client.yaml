@@ -1,0 +1,6 @@
+package: user_client
+generate:
+  client: true
+  models: true
+output-options:
+  skip-prune: true

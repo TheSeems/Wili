@@ -1,0 +1,202 @@
+openapi: 3.0.3
+info:
+  title: Wili User Service API
+  version: 0.1.0
+  description: |
+    Wili User Service handles authentication and user profile management.
+    Authentication is performed via Yandex ID OAuth (MVP) and issues JWT tokens
+    that are later used by other services inside the Wili platform.
+
+servers:
+  - url: http://localhost:8080
+    description: Localhost service endpoint
+  - url: http://user-service:8080
+    description: Internal service endpoint
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/yandex:
+    post:
+      summary: Authenticate a user via Yandex ID OAuth code
+      description: |
+        Exchanges Yandex OAuth `code` for a JWT access token recognised by Wili services.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YandexAuthRequest'
+      responses:
+        "200":
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        "400":
+          description: Invalid request or code
+        "401":
+          description: Authentication failed
+
+  /auth/validate:
+    post:
+      summary: Validate JWT token and return user information (internal endpoint)
+      description: |
+        Internal endpoint for other services to validate JWT tokens and extract user information.
+        This endpoint is used by other Wili services to authenticate requests.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateTokenRequest'
+      responses:
+        "200":
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateTokenResponse'
+        "401":
+          description: Invalid or expired token
+
+  /users/me:
+    get:
+      summary: Get the current authenticated user's profile
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The authenticated user's public profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "401":
+          description: Missing or invalid JWT
+    put:
+      summary: Update current authenticated user's profile fields
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        "200":
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "400":
+          description: Invalid input
+        "401":
+          description: Missing or invalid JWT
+
+  /users/{userId}:
+    get:
+      summary: Get public profile of a user
+      tags: [Users]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Public profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicUserProfile'
+        "404":
+          description: User not found
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    # Auth
+    YandexAuthRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: OAuth authorization code returned by Yandex after user consent.
+    AuthResponse:
+      type: object
+      required: [accessToken, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token
+        expiresIn:
+          type: integer
+          format: int64
+          description: Token lifetime in seconds
+        user:
+          $ref: '#/components/schemas/User'
+
+    # User profile
+    User:
+      type: object
+      required: [id, displayName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+    UpdateUserRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+
+    ValidateTokenRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: JWT token to validate
+
+    ValidateTokenResponse:
+      type: object
+      required: [valid, user]
+      properties:
+        valid:
+          type: boolean
+          description: Whether the token is valid
+        user:
+          $ref: '#/components/schemas/User'
+
+    PublicUserProfile:
+      allOf:
+        - $ref: '#/components/schemas/User'
+
