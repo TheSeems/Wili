@@ -57,48 +57,48 @@ export class WishlistApiClient {
 
 	// Wishlist operations
 	async getWishlists(token: string): Promise<{ wishlists: Wishlist[] }> {
-		return this.request('/wishlists', { method: 'GET' }, token);
+		return this.request('', { method: 'GET' }, token);
 	}
 
 	async getWishlist(id: string, token?: string): Promise<Wishlist> {
-		return this.request(`/wishlists/${id}`, { method: 'GET' }, token);
+		return this.request(`/${id}`, { method: 'GET' }, token);
 	}
 
 	async createWishlist(data: CreateWishlistRequest, token: string): Promise<Wishlist> {
-		return this.request('/wishlists', {
+		return this.request('', {
 			method: 'POST',
 			body: JSON.stringify(data)
 		}, token);
 	}
 
 	async updateWishlist(id: string, data: UpdateWishlistRequest, token: string): Promise<Wishlist> {
-		return this.request(`/wishlists/${id}`, {
+		return this.request(`/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(data)
 		}, token);
 	}
 
 	async deleteWishlist(id: string, token: string): Promise<void> {
-		await this.request(`/wishlists/${id}`, { method: 'DELETE' }, token, false);
+		await this.request(`/${id}`, { method: 'DELETE' }, token, false);
 	}
 
 	// Wishlist item operations
 	async addWishlistItem(wishlistId: string, data: CreateWishlistItemRequest, token: string): Promise<WishlistItem> {
-		return this.request(`/wishlists/${wishlistId}/items`, {
+		return this.request(`/${wishlistId}/items`, {
 			method: 'POST',
 			body: JSON.stringify(data)
 		}, token);
 	}
 
 	async updateWishlistItem(wishlistId: string, itemId: string, data: UpdateWishlistItemRequest, token: string): Promise<WishlistItem> {
-		return this.request(`/wishlists/${wishlistId}/items/${itemId}`, {
+		return this.request(`/${wishlistId}/items/${itemId}`, {
 			method: 'PUT',
 			body: JSON.stringify(data)
 		}, token);
 	}
 
 	async deleteWishlistItem(wishlistId: string, itemId: string, token: string): Promise<void> {
-		await this.request(`/wishlists/${wishlistId}/items/${itemId}`, { method: 'DELETE' }, token, false);
+		await this.request(`/${wishlistId}/items/${itemId}`, { method: 'DELETE' }, token, false);
 	}
 }
 
