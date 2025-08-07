@@ -170,7 +170,7 @@
 							<CardDescription>
 								<ExpandableText 
 									content={wishlist.description}
-									maxHeight={200}
+									maxHeight={400}
 									className="text-muted-foreground"
 									allowYandexMarket={false}
 								/>

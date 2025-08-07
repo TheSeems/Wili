@@ -25,8 +25,54 @@
 		if (!content) return [];
 		
 		const urls: Array<{url: string, isYandexMarket: boolean, id: string}> = [];
-		const urlRegex = /https?:\/\/[^\s]+/g;
-		const matches = content.match(urlRegex) || [];
+		
+		// First, let's extract URLs that are NOT part of markdown syntax
+		const urlRegex = /https?:\/\/[^\s\)]+/g;
+		let match;
+		const matches: string[] = [];
+		
+		// Find all URLs and their positions
+		while ((match = urlRegex.exec(content)) !== null) {
+			const url = match[0];
+			const startIndex = match.index;
+			const endIndex = startIndex + url.length;
+			
+			// Check if this URL is part of markdown image syntax ![alt](url)
+			const beforeUrl = content.substring(0, startIndex);
+			const afterUrl = content.substring(endIndex);
+			
+			// Skip if it's an image URL
+			if (/\.(jpg|jpeg|png|gif|webp|svg|ico|bmp|tiff)$/i.test(url)) {
+				continue;
+			}
+			
+			// Skip if it's part of markdown image syntax ![alt](url)
+			if (afterUrl.startsWith(')')) {
+				const beforeUrl = content.substring(0, startIndex);
+				if (beforeUrl.includes('![') && beforeUrl.lastIndexOf('![') > beforeUrl.lastIndexOf('](')) {
+					continue;
+				}
+			}
+			
+			// Skip if it's part of markdown link syntax [text](url)
+			if (afterUrl.startsWith(')')) {
+				const beforeUrl = content.substring(0, startIndex);
+				if (beforeUrl.includes('[') && beforeUrl.lastIndexOf('[') > beforeUrl.lastIndexOf('](')) {
+					continue;
+				}
+			}
+			
+			// Skip if it's inside parentheses but not part of markdown syntax
+			if (afterUrl.startsWith(')')) {
+				const beforeUrl = content.substring(0, startIndex);
+				if (beforeUrl.includes('(') && beforeUrl.lastIndexOf('(') > beforeUrl.lastIndexOf(')')) {
+					continue;
+				}
+			}
+			
+			// Only add URLs that are standalone (not part of any markdown syntax)
+			matches.push(url);
+		}
 		
 		return matches.map(url => ({
 			url,
@@ -55,7 +101,7 @@
 		if (isStandaloneUrl) {
 			// Generate unique ID for the placeholder
 			const urlId = `url-${Math.random().toString(36).substr(2, 9)}`;
-			return `<div class="url-placeholder" data-url="${href}" data-url-id="${urlId}"></div>`;
+			return `<span class="url-placeholder" data-url="${href}" data-url-id="${urlId}"></span>`;
 		}
 		
 		// Otherwise, render as a normal link
@@ -78,7 +124,7 @@
 			{#if urlInfo.isYandexMarket && allowYandexMarket}
 				<YandexMarketWidget productUrl={urlInfo.url} />
 			{:else}
-				<UrlBadge url={urlInfo.url} />
+				<UrlBadge url={urlInfo.url} variant="inline" />
 			{/if}
 		{/each}
 	</div>

@@ -12,6 +12,7 @@
 	let expanded = false;
 	let contentElement: HTMLElement;
 	let needsExpansion = false;
+	let measuredHeight = 0;
 	
 	// Check if content needs expansion after it's rendered
 	$: if (contentElement && content) {
@@ -21,13 +22,20 @@
 	function checkNeedsExpansion() {
 		if (!contentElement) return;
 		
-		// Temporarily expand to measure full height
-		const originalMaxHeight = contentElement.style.maxHeight;
-		contentElement.style.maxHeight = 'none';
-		const fullHeight = contentElement.scrollHeight;
-		contentElement.style.maxHeight = originalMaxHeight;
+		// Create a temporary clone to measure the full height without affecting the DOM
+		const clone = contentElement.cloneNode(true) as HTMLElement;
+		clone.style.position = 'absolute';
+		clone.style.visibility = 'hidden';
+		clone.style.maxHeight = 'none';
+		clone.style.height = 'auto';
+		document.body.appendChild(clone);
 		
-		needsExpansion = fullHeight > maxHeight;
+		const fullHeight = clone.scrollHeight;
+		document.body.removeChild(clone);
+		
+		measuredHeight = fullHeight;
+		// Add a small buffer (5px) to prevent showing "Show more" for content that's just barely over the limit
+		needsExpansion = fullHeight > (maxHeight + 5);
 	}
 	
 	function toggleExpanded(event: MouseEvent) {

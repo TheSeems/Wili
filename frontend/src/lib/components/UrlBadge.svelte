@@ -3,9 +3,10 @@
 		url: string;
 		className?: string;
 		displayText?: string;
+		variant?: 'default' | 'inline';
 	}
 	
-	let { url, className = '', displayText = '' }: Props = $props();
+	let { url, className = '', displayText = '', variant = 'default' }: Props = $props();
 
 	// Extract domain from URL
 	let domain = $derived((() => {
@@ -57,7 +58,7 @@
 	href={cleanUrl}
 	target="_blank"
 	rel="noopener noreferrer"
-	class="url-badge {className}"
+	class="url-badge url-badge-{variant} {className}"
 >
 	<img 
 		src={faviconUrl} 
@@ -97,6 +98,20 @@
 		text-decoration: none;
 		transition: all 0.2s ease;
 		margin: 0.25rem 0;
+	}
+
+	/* Inline variant - smaller and more compact */
+	:global(.url-badge-inline) {
+		padding: 0.25rem 0.5rem;
+		font-size: 0.75rem;
+		gap: 0.25rem;
+		margin: 0 0.25rem;
+		vertical-align: middle;
+	}
+
+	/* Ensure proper spacing between multiple inline badges */
+	:global(.url-badge-inline + .url-badge-inline) {
+		margin-left: 0.5rem;
 	}
 
 	:global(.url-badge:hover) {

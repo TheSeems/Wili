@@ -383,7 +383,7 @@
 						<EditIcon class="h-4 w-4" />
 						<T key="common.edit" fallback="Edit" />
 					</Button>
-											<DropdownMenu.Root>
+						<DropdownMenu.Root>
 							<DropdownMenu.Trigger>
 								<Button
 									variant="ghost"
@@ -531,8 +531,8 @@
 									<CardDescription>
 										<ExpandableText 
 											content={item.data.description} 
-											maxHeight={120}
-											className="text-muted-foreground"
+											maxHeight={300}
+											className="mt-2 text-muted-foreground"
 										/>
 									</CardDescription>
 								{/if}
