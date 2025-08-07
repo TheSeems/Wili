@@ -21,7 +21,7 @@ metadata:
 type: Opaque
 data:
   MONGO_USERNAME: YWRtaW4= # base64 encoded "admin" - should match mongodb secret
-  MONGO_PASSWORD: cGFzc3dvcmQ= # base64 encoded "password" - should match mongodb secret
+  MONGO_PASSWORD: MONGO_PASSWORD_PLACEHOLDER # base64 encoded "password" - should match mongodb secret
 
 ---
 apiVersion: apps/v1
@@ -41,7 +41,7 @@ spec:
     spec:
       containers:
       - name: wishlist-service
-        image: cr.yandex/YOUR_REGISTRY_ID/wishlist-service:latest
+        image: cr.yandex/REGISTRY_ID_PLACEHOLDER/wishlist-service:IMAGE_TAG_PLACEHOLDER
         ports:
         - containerPort: 8080
         env:

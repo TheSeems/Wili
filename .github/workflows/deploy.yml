@@ -130,17 +130,6 @@ jobs:
       run: |
         yc managed-kubernetes cluster get-credentials $YC_CLUSTER_ID --external
 
-    - name: Update Kubernetes manifests with new image tags
-      run: |
-        # Update user service image
-        sed -i "s|cr.yandex/YOUR_REGISTRY_ID/user-service:latest|$YC_REGISTRY/$YC_REGISTRY_ID/user-service:${{ github.sha }}|g" k8s/user-service.yaml
-        
-        # Update wishlist service image
-        sed -i "s|cr.yandex/YOUR_REGISTRY_ID/wishlist-service:latest|$YC_REGISTRY/$YC_REGISTRY_ID/wishlist-service:${{ github.sha }}|g" k8s/wishlist-service.yaml
-        
-        # Update frontend image
-        sed -i "s|cr.yandex/YOUR_REGISTRY_ID/frontend:latest|$YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }}|g" k8s/frontend.yaml
-
     - name: Install cert-manager
       run: |
         # Install cert-manager
@@ -152,30 +141,17 @@ jobs:
         kubectl wait --for=condition=available --timeout=300s deployment/cert-manager-webhook -n cert-manager
 
     - name: Deploy to Kubernetes
+      env:
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        YANDEX_CLIENT_ID: ${{ secrets.YANDEX_CLIENT_ID }}
+        YANDEX_CLIENT_SECRET: ${{ secrets.YANDEX_CLIENT_SECRET }}
+        YC_REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
+        IMAGE_TAG: ${{ github.sha }}
       run: |
-        # Apply namespace first
-        kubectl apply -f k8s/namespace.yaml
-        
-        # Apply databases
-        kubectl apply -f k8s/postgres.yaml
-        kubectl apply -f k8s/mongodb.yaml
-        
-        # Wait for databases to be ready
-        kubectl wait --for=condition=available --timeout=300s deployment/postgres -n wili
-        kubectl wait --for=condition=available --timeout=300s deployment/mongodb -n wili
-        
-        # Apply services
-        kubectl apply -f k8s/user-service.yaml
-        kubectl apply -f k8s/wishlist-service.yaml
-        kubectl apply -f k8s/frontend.yaml
-        
-        # Apply ingress
-        kubectl apply -f k8s/ingress.yaml
-        
-        # Wait for deployments to be ready
-        kubectl wait --for=condition=available --timeout=300s deployment/user-service -n wili
-        kubectl wait --for=condition=available --timeout=300s deployment/wishlist-service -n wili
-        kubectl wait --for=condition=available --timeout=300s deployment/frontend -n wili
+        chmod +x scripts/template-k8s.sh
+        ./scripts/template-k8s.sh
 
     - name: Verify Deployment
       run: |

@@ -37,7 +37,8 @@ func main() {
 		panic("USER_SERVICE_URL is not set")
 	}
 
-	addr := getEnv("PORT", ":8081")
+	port := getEnv("PORT", "8081")
+	addr := ":" + port
 
 	// Initialize MongoDB repository
 	repo, err := NewMongoRepo(mongoURI, dbName)

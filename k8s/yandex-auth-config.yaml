@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: yandex-auth-config
+  namespace: wili
+data:
+  YANDEX_CLIENT_ID: "YANDEX_CLIENT_ID_PLACEHOLDER"
+  YANDEX_CLIENT_SECRET: "YANDEX_CLIENT_SECRET_PLACEHOLDER"

@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: cr.yandex/YOUR_REGISTRY_ID/frontend:latest
+        image: cr.yandex/REGISTRY_ID_PLACEHOLDER/frontend:IMAGE_TAG_PLACEHOLDER
         ports:
         - containerPort: 3000
         env:
@@ -39,6 +39,11 @@ spec:
             configMapKeyRef:
               name: frontend-config
               key: PUBLIC_API_BASE_URL
+        - name: VITE_YANDEX_CLIENT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: yandex-auth-config
+              key: YANDEX_CLIENT_ID
         resources:
           requests:
             memory: "128Mi"

@@ -19,8 +19,8 @@ metadata:
   namespace: wili
 type: Opaque
 data:
-  DB_PASSWORD: cG9zdGdyZXM= # base64 encoded "postgres" - should match postgres secret
-  JWT_SECRET: bXlfc3VwZXJfc2VjcmV0X2p3dF9rZXk= # base64 encoded "my_super_secret_jwt_key" - change in production
+  DB_PASSWORD: DB_PASSWORD_PLACEHOLDER # Will be replaced by GitHub secrets
+  JWT_SECRET: JWT_SECRET_PLACEHOLDER # Will be replaced by GitHub secrets
 
 ---
 apiVersion: apps/v1
@@ -40,7 +40,7 @@ spec:
     spec:
       containers:
       - name: user-service
-        image: cr.yandex/YOUR_REGISTRY_ID/user-service:latest
+        image: cr.yandex/REGISTRY_ID_PLACEHOLDER/user-service:IMAGE_TAG_PLACEHOLDER
         ports:
         - containerPort: 8080
         env:
@@ -84,6 +84,16 @@ spec:
             secretKeyRef:
               name: user-service-secret
               key: JWT_SECRET
+        - name: YANDEX_CLIENT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: yandex-auth-config
+              key: YANDEX_CLIENT_ID
+        - name: YANDEX_CLIENT_SECRET
+          valueFrom:
+            configMapKeyRef:
+              name: yandex-auth-config
+              key: YANDEX_CLIENT_SECRET
         resources:
           requests:
             memory: "128Mi"

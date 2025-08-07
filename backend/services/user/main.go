@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
@@ -33,9 +34,17 @@ func main() {
 	// optional swagger UI (mounted only with `go run -tags=dev`)
 	devutil.MountSwagger(r, "Wili User Service API")
 
-	addr := ":8080"
+	port := getEnv("PORT", "8080")
+	addr := ":" + port
 	log.Printf("User service listening on %s", addr)
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("failed to start server: %v", err)
 	}
+}
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
