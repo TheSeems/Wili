@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { authStore } from "$lib/stores/auth";
 	import { invalidateAll, goto } from "$app/navigation";
-	import { page } from "$app/state";
+	import { browser } from "$app/environment";
 	import SunIcon from "@lucide/svelte/icons/sun";
 	import MoonIcon from "@lucide/svelte/icons/moon";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
@@ -33,7 +33,7 @@
 		isLoading = authState.isLoading;
 	}
 
-	function logout() {
+	async function logout() {
 		const confirmMessage = $i18nLoading ? "Are you sure you want to log out?" : ($_('nav.confirmLogout') || "Are you sure you want to log out?");
 		if (!confirm(confirmMessage)) return;
 		
@@ -44,7 +44,11 @@
 			token: undefined,
 			user: null,
 		}));
+
 		invalidateAll();
+		if (browser) {
+			window.location.href = "/";
+		}
 	}
 </script>
 

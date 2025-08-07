@@ -357,7 +357,7 @@
 							<ExpandableText 
 								content={wishlist.description} 
 								allowYandexMarket={false}
-								maxHeight={100}
+								maxHeight={200}
 								className="text-muted-foreground"
 							/>
 						</div>

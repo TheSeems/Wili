@@ -12,8 +12,8 @@
     "title": "Welcome to Wili 🎁",
     "description": "Create and share wish-lists with friends, family, or anyone else.",
     "loginPrompt": "Log in to start building yours.",
-    "welcomeTitle": "Welcome!",
-    "welcomeDescription": "You have successfully logged in to Wili, {name}!"
+    "welcomeTitle": "Welcome",
+    "welcomeDescription": "You have successfully logged in, {name}!"
   },
   "common": {
     "loading": "Loading...",
@@ -42,7 +42,11 @@
   },
   "auth": {
     "anonymousViewing": "👀 You're viewing this wishlist anonymously.",
-    "loginToCreateWishlists": "to create your own wishlists."
+    "loginToCreateWishlists": "to create your own wishlists.",
+    "loginWithYandex": "Login with Yandex",
+    "authenticating": "Authenticating…",
+    "redirectMessage": "If you are not redirected in a few seconds, please",
+    "clickHere": "click here"
   },
   "wishlists": {
     "title": "My Wishlists",

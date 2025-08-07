@@ -3,6 +3,7 @@
 	import { page } from "$app/state";
 	import { goto } from "$app/navigation";
 	import { exchangeCode } from "$lib/auth";
+	import T from "$lib/components/T.svelte";
 
 	onMount(async () => {
 		const url = new URL(page.url);
@@ -14,7 +15,7 @@
 		}
 		try {
 			await exchangeCode(code);
-			close();
+			await goto("/");
 		} catch (e) {
 			alert("Authentication failed. Please try again: " + e);
 			console.error(e);
@@ -22,14 +23,14 @@
 	});
 </script>
 
-<div class="flex items-center justify-center h-[80vh] flex-col gap-4">
+<div class="flex items-center justify-center h-[80vh] flex-col gap-4 m-auto">
 	<h1 class="text-2xl font-bold">
-		Authenticating…
+		<T key="auth.authenticating" fallback="Authenticating…" /> <span class="animate-spin">⏳</span>
 	</h1>
 	<p>
-		If you are not redirected in a few seconds, please <a
+		<T key="auth.redirectMessage" fallback="If you are not redirected in a few seconds, please" /> <a
 			href="/"
-			class="text-blue-500 underline">click here</a
+			class="text-blue-500 underline"><T key="auth.clickHere" fallback="click here" /></a
 		>.
 	</p>
 </div>

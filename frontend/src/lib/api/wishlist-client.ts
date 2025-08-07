@@ -1,5 +1,4 @@
-import { browser } from '$app/environment';
-import { PUBLIC_API_BASE_URL } from '$env/static/public';
+import { PUBLIC_WISHLIST_API_BASE_URL } from '$env/static/public';
 import type { components } from '$lib/api/generated/wishlist-api';
 
 type Wishlist = components['schemas']['Wishlist'];
@@ -40,7 +39,7 @@ export class WishlistApiClient {
 		});
 
 		if (!response.ok) {
-			throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+			throw new Error(`API request failed: ${response.status} ${response.statusText}`, { cause: response });
 		}
 
 		if (!expectJson) {
@@ -104,4 +103,4 @@ export class WishlistApiClient {
 }
 
 // Default client instance
-export const wishlistApi = new WishlistApiClient(PUBLIC_API_BASE_URL);
+export const wishlistApi = new WishlistApiClient(PUBLIC_WISHLIST_API_BASE_URL);

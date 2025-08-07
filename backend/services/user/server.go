@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -341,6 +342,9 @@ func (s *server) exchangeYandexCode(code string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		// Log the response body for debugging
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[AUTH] Token exchange failed: %d - %s", resp.StatusCode, string(bodyBytes))
 		return "", fmt.Errorf("token exchange failed with status: %d", resp.StatusCode)
 	}
 

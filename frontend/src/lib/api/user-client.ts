@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import { PUBLIC_API_BASE_URL } from '$env/static/public';
+import { PUBLIC_USER_API_BASE_URL } from '$env/static/public';
 import type { components } from '$lib/api/generated/users-api';
 
 type User = components['schemas']['User'];
@@ -69,4 +69,4 @@ export class UserApiClient {
 }
 
 // Default client instance
-export const userApi = new UserApiClient(PUBLIC_API_BASE_URL);
+export const userApi = new UserApiClient(PUBLIC_USER_API_BASE_URL);
