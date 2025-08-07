@@ -18,9 +18,11 @@ COPY . .
 
 RUN chmod -R 755 node_modules/.bin
 
-# Accept build argument and set as environment variable
+# Accept build arguments and set as environment variables
 ARG PUBLIC_API_BASE_URL=https://api.wili.me
+ARG VITE_YANDEX_CLIENT_ID
 ENV PUBLIC_API_BASE_URL=$PUBLIC_API_BASE_URL
+ENV VITE_YANDEX_CLIENT_ID=$VITE_YANDEX_CLIENT_ID
 
 # Build the application
 RUN pnpm run build

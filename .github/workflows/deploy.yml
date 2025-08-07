@@ -94,7 +94,7 @@ jobs:
     - name: Build and Push Frontend
       run: |
         cd frontend
-        docker build --build-arg PUBLIC_API_BASE_URL=https://api.wili.me -t $YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }} .
+        docker build --build-arg PUBLIC_API_BASE_URL=https://api.wili.me --build-arg VITE_YANDEX_CLIENT_ID=${{ secrets.YANDEX_CLIENT_ID }} -t $YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }} .
         docker tag $YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }} $YC_REGISTRY/$YC_REGISTRY_ID/frontend:latest
         docker push $YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }}
         docker push $YC_REGISTRY/$YC_REGISTRY_ID/frontend:latest

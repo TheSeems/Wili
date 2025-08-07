@@ -39,11 +39,7 @@ spec:
             configMapKeyRef:
               name: frontend-config
               key: PUBLIC_API_BASE_URL
-        - name: VITE_YANDEX_CLIENT_ID
-          valueFrom:
-            configMapKeyRef:
-              name: yandex-auth-config
-              key: YANDEX_CLIENT_ID
+        # VITE_YANDEX_CLIENT_ID is now built into the image at build time
         resources:
           requests:
             memory: "128Mi"

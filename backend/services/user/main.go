@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
@@ -22,6 +24,17 @@ func main() {
 
 	r := chi.NewRouter()
 	devutil.EnableCORS(r)
+
+	// Add health endpoint
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":    "healthy",
+			"service":   "user-service",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		})
+	})
 
 	repo, err := newPGRepo()
 	if err != nil {

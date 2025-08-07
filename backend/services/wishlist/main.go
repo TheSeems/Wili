@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
@@ -62,6 +64,17 @@ func main() {
 	// Setup router
 	r := chi.NewRouter()
 	devutil.EnableCORS(r)
+
+	// Add health endpoint
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":    "healthy",
+			"service":   "wishlist-service",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		})
+	})
 
 	// Mount API routes
 	r.Mount("/", wishlistgen.Handler(server))

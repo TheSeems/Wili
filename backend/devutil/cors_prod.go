@@ -11,7 +11,7 @@ import (
 // EnableCORS applies production CORS settings for wili.me domain.
 func EnableCORS(r chi.Router) {
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://wili.me", "https://www.wili.me"},
+		AllowedOrigins:   []string{"https://wili.me", "https://www.wili.me", "https://*.yandex.ru"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
 		AllowCredentials: true,
