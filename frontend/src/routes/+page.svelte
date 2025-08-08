@@ -10,6 +10,7 @@
 	import { _, isLoading as i18nLoading } from 'svelte-i18n';
 	import T from "$lib/components/T.svelte";
 	import I18nText from "$lib/components/I18nText.svelte";
+  import WiliLogo from "$lib/components/WiliLogo.svelte";
 
 	$: ({ token, user, isLoading, justLoggedIn } = $authStore);
 
@@ -55,7 +56,8 @@
 			<p class="text-gray-600"><T key="common.loading" fallback="Loading..." /></p>
 		</div>
 	{:else}
-		<I18nText key="home.title" fallback="Welcome to Wili 🎁" tag="h1" class="text-4xl font-bold mb-4" />
+        <h1 class="sr-only"><T key="home.title" fallback="Welcome to Wili" /></h1>
+        <WiliLogo className="h-20 md:h-28 lg:h-32 mb-6" />
 		<p class="text-gray-600 max-w-md text-center">
 			<T key="home.description" fallback="Create and share wish-lists with friends, family, or anyone else." />
 			{#if !token}

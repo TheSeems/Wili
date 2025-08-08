@@ -18,6 +18,7 @@
 	import LanguageSwitcher from "$lib/components/LanguageSwitcher.svelte";
 	import T from "$lib/components/T.svelte";
 	import { _, isLoading as i18nLoading } from 'svelte-i18n';
+  	import WiliLogo from "$lib/components/WiliLogo.svelte";
 	let user: {
 		displayName: string;
 		email?: string | null;
@@ -56,14 +57,16 @@
 	class="w-full flex items-center justify-between px-4 py-2 sticky top-0 z-10"
 	style="backdrop-filter: blur(8px);"
 >
-	<div class="flex items-center gap-6">
-		<a href="/" class="text-xl font-bold">Wili</a>
+    <div class="flex items-center gap-6">
+        <a href="/" class="flex items-center" aria-label="Go to home">
+            <WiliLogo className="h-7 -translate-y-0.5" />
+        </a>
 		{#if !isLoading && (user || token)}
 			<nav class="flex items-center gap-4">
-				<a
-					href="/wishlists"
-					class="text-sm font-medium hover:text-primary transition-colors"
-				>
+                <a
+                    href="/wishlists"
+                    class="text-sm font-medium hover:text-primary transition-colors h-7 flex items-center leading-none"
+                >
 <T key="nav.wishlists" fallback="Wishlists" />
 				</a>
 			</nav>
