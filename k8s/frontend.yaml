@@ -6,6 +6,9 @@ metadata:
 data:
   NODE_ENV: "production"
   PUBLIC_API_BASE_URL: "https://api.wili.me"
+  PUBLIC_AUTH_API_BASE_URL: "https://api.wili.me"
+  PUBLIC_USER_API_BASE_URL: "https://api.wili.me"
+  PUBLIC_WISHLIST_API_BASE_URL: "https://api.wili.me/wishlists"
 
 ---
 apiVersion: apps/v1
@@ -39,6 +42,21 @@ spec:
             configMapKeyRef:
               name: frontend-config
               key: PUBLIC_API_BASE_URL
+        - name: PUBLIC_AUTH_API_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: PUBLIC_AUTH_API_BASE_URL
+        - name: PUBLIC_USER_API_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: PUBLIC_USER_API_BASE_URL
+        - name: PUBLIC_WISHLIST_API_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: PUBLIC_WISHLIST_API_BASE_URL
         # VITE_YANDEX_CLIENT_ID is now built into the image at build time
         resources:
           requests:

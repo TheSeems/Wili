@@ -8,7 +8,7 @@ export const USER_KEY = 'wili_user';
 export const JUST_LOGGED_IN_KEY = 'wili_just_logged_in';
 
 // Prefer SvelteKit dynamic public env; fall back to Vite env at runtime
-const AUTH_API_BASE_URL = env.PUBLIC_AUTH_API_BASE_URL ?? (import.meta as any).env?.VITE_AUTH_API_BASE_URL ?? '';
+const AUTH_API_BASE_URL = env.PUBLIC_AUTH_API_BASE_URL ?? env.PUBLIC_API_BASE_URL ?? (import.meta as any).env?.VITE_AUTH_API_BASE_URL ?? 'https://api.wili.me';
 
 type AuthResponse = components['schemas']['AuthResponse'];
 
