@@ -1,5 +1,5 @@
 # Backend Tools
 
-A project for all the repetitive backend tools such as for example endpoint generation for openapi spec or local dev env setup etc.
+Utility modules for code generation and dev scripts.
 
-Check tool* at [go.mod](go.mod)
+See [go.mod](go.mod) for available tool packages.
