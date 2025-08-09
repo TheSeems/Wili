@@ -1,17 +1,26 @@
 # Wili Backend
 
-## Stack
+Go microservices powering authentication and wishlists.
 
-- Golang 1.24.5 for modern web development
-- Postgres for efficiency in user service
-- MongoDB for extensibility in wishlist service as we're about to support super-custom wishlists with products from marketplaces and multiple other reward types
-- OpenAPI
-- Kubernetes
+## Services
 
-## Architecture
+- user: Yandex ID auth, user profiles, JWT issuance
+- wishlist: CRUD for wishlists and items
 
-Microservice architecture
+## Tech
 
-## Approach
+- Go 1.24.x, chi
+- Postgres (user), MongoDB (wishlist)
+- OpenAPI (oapi-codegen)
 
-- Spec-first development. First, create a spec, then generate (or regenerate) client or server endpoints and use it. Same spec, client for frontend, server endpoints for backend
+## Dev
+
+Prereqs: Go, Postgres, MongoDB, env vars.
+
+Run services:
+```
+cd backend/services/user && go run .
+cd backend/services/wishlist && go run .
+```
+
+Spec-first: update `openapi.yaml`, then regenerate clients/servers as needed.

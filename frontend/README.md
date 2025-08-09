@@ -1,11 +1,24 @@
 # Wili Frontend
 
-## Stack
+SvelteKit app for creating and sharing wishlists.
 
-- Svelte/Typescript for modern web development
-- shadcn-svelte as UI library
-- OpenAPI
+## Commands
 
-## Approach
+- Install: `pnpm install`
+- Dev: `pnpm dev`
+- Build: `pnpm build`
+- Preview: `pnpm preview`
+- Type check: `pnpm check`
+- Format: `pnpm format`
 
-- Spec-first development. First, create a spec, then generate (or regenerate) client or server endpoints and use it. Same spec, client for frontend, server endpoints for backend
+## Env
+
+Copy `.env.example` to `.env` and adjust values (API URLs, Yandex client ID).
+
+## Codegen
+
+Generate API clients and validation constants:
+
+```
+pnpm run generate:api
+```
