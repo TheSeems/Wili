@@ -20,7 +20,7 @@ RUN chmod -R 755 node_modules/.bin
 
 # Accept build arguments and set as environment variables
 ARG PUBLIC_AUTH_API_BASE_URL=https://api.wili.me
-ARG PUBLIC_USER_API_BASE_URL=https://api.wili.me/users
+ARG PUBLIC_USER_API_BASE_URL=https://api.wili.me
 ARG PUBLIC_WISHLIST_API_BASE_URL=https://api.wili.me/wishlists
 ARG VITE_YANDEX_CLIENT_ID
 ENV PUBLIC_AUTH_API_BASE_URL=$PUBLIC_AUTH_API_BASE_URL
