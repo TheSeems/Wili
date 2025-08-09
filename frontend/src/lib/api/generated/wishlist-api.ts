@@ -3,7 +3,6 @@
  * Do not make direct changes to the file.
  */
 
-
 export interface paths {
   "/wishlists": {
     /** List wishlists of the authenticated user */

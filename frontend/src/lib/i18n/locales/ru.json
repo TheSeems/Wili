@@ -78,7 +78,7 @@
     "failedToAdd": "Не удалось добавить элемент",
     "shareLink": "Поделиться ссылкой",
     "deleteWishlist": "Удалить вишлист",
-      "shareLinkCopied": "Ссылка на вишлист скопирована в буфер обмена!",
+    "shareLinkCopied": "Ссылка на вишлист скопирована в буфер обмена!",
     "shareLinkCopiedDescription": "Ссылка на вишлист скопирована в буфер обмена!",
     "itemNamePlaceholder": "Название элемента",
     "itemDescriptionPlaceholder": "Описание элемента (необязательно)",
