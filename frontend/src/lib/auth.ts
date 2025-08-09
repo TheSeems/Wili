@@ -78,3 +78,13 @@ export async function exchangeCode(code: string) {
 		});
 	}
 }
+
+export function logout() {
+  // Clear local auth state and storage
+  if (browser) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(JUST_LOGGED_IN_KEY);
+  }
+  authStore.set({ token: undefined, user: null, isLoading: false, justLoggedIn: false });
+}

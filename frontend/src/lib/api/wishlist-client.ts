@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/public';
+import { logout } from '$lib/auth';
 import type { components } from '$lib/api/generated/wishlist-api';
 
 type Wishlist = components['schemas']['Wishlist'];
@@ -36,13 +37,16 @@ export class WishlistApiClient {
 			headers.Authorization = `Bearer ${token}`;
 		}
 
-		const response = await fetch(url, {
+        const response = await fetch(url, {
 			...options,
 			headers
 		});
 
-		if (!response.ok) {
-			throw new Error(`API request failed: ${response.status} ${response.statusText}`, { cause: response });
+        if (!response.ok) {
+            if (response.status === 401) {
+                logout();
+            }
+            throw new Error(`API request failed: ${response.status} ${response.statusText}`, { cause: response });
 		}
 
 		if (!expectJson) {

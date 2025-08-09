@@ -13,7 +13,6 @@
 	} from "$lib/components/ui/card";
 	import { Input } from "$lib/components/ui/input";
 	import { Textarea } from "$lib/components/ui/textarea";
-	import { Badge } from "$lib/components/ui/badge";
 	import { Separator } from "$lib/components/ui/separator";
 	import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
 	import {
@@ -23,7 +22,6 @@
 		PlusIcon,
 		SaveIcon,
 		XIcon,
-		ExternalLinkIcon,
 		MoreVerticalIcon,
 		ShareIcon,
 	} from "@lucide/svelte";
@@ -43,31 +41,41 @@
 	type Wishlist = components["schemas"]["Wishlist"];
 	type WishlistItem = components["schemas"]["WishlistItem"];
 
-	let wishlist: Wishlist | null = null;
-	let loading = true;
-	let error: string | null = null;
-	let editing = false;
-	let editForm = {
+    let wishlist: Wishlist | null = $state(null);
+    let loading = $state(true);
+    let error = $state<string | null>(null);
+    let editing = $state(false);
+    let editForm = $state({
 		title: "",
 		description: "",
-	};
+    });
 
 	// New item form
-	let addingItem = false;
-	let newItem = {
+    let addingItem = $state(false);
+    let newItem = $state({
 		name: "",
 		description: "",
 		type: "general" as const,
-	};
+    });
 
 	// Item editing
-	let editingItemId: string | null = null;
-	let editItemForm = {
+    let editingItemId = $state<string | null>(null);
+    let editItemForm = $state({
 		name: "",
 		description: "",
-	};
+    });
 
-	$: wishlistId = page.params.id;
+	const wishlistId = $derived(page.params.id);
+
+	// SEO/OG derived values
+	const defaultOgTitle = 'Wishlist — Wili';
+	const defaultOgDescription = 'View this wishlist on Wili.';
+	function summarize(text: string): string {
+		const s = (text || '').toString().replace(/\s+/g, ' ').trim();
+		return s.length > 160 ? s.slice(0, 160) + '…' : s;
+	}
+	const ogTitle = $derived(wishlist && wishlist.title ? `${wishlist.title} — Wili` : defaultOgTitle);
+	const ogDescription = $derived(wishlist && wishlist.description ? summarize(wishlist.description) : defaultOgDescription);
 
 	async function loadWishlist() {
 		if (!wishlistId) return;
@@ -265,7 +273,17 @@
 </script>
 
 <svelte:head>
-	<title>{wishlist?.title || "Wishlist"} - Wili</title>
+    <title>{ogTitle}</title>
+    <meta name="description" content={ogDescription} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={ogTitle} />
+    <meta property="og:description" content={ogDescription} />
+    <meta property="og:url" content={page.url.href} />
+    <meta property="og:image" content="/favicon.ico" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={ogTitle} />
+    <meta name="twitter:description" content={ogDescription} />
+    <meta name="twitter:image" content="/favicon.ico" />
 </svelte:head>
 
 <div class="container mx-auto px-4 py-8">

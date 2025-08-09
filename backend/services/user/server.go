@@ -39,11 +39,10 @@ type yandexUserInfo struct {
 
 func newServer(r UserRepo) *server { return &server{repo: r} }
 
-// --- helpers
 var jwtKey = []byte(os.Getenv("JWT_SIGNING_KEY"))
 
 func sign(userID string) (string, int64) {
-	exp := time.Hour * 24
+	exp := time.Hour * 24 * 365 * 10
 	claims := jwt.MapClaims{"sub": userID, "exp": time.Now().Add(exp).Unix()}
 	t, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(jwtKey)
 	return t, int64(exp.Seconds())

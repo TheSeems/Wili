@@ -1,18 +1,36 @@
 import { browser } from '$app/environment';
 import { init, register, locale, isLoading } from 'svelte-i18n';
 
-const defaultLocale = 'en';
+const FALLBACK_LOCALE = 'ru';
 
 register('en', () => import('./locales/en.json'));
 register('ru', () => import('./locales/ru.json'));
 
+function detectBrowserLocale(): string | null {
+    if (!browser) return null;
+    const map = (lang: string | undefined | null): string | null => {
+        if (!lang) return null;
+        const ll = lang.toLowerCase();
+        if (ll.startsWith('ru')) return 'ru';
+        if (ll.startsWith('en')) return 'en';
+        return null;
+    };
+    const langs = (navigator.languages || []).map(map).filter(Boolean) as string[];
+    if (langs.length > 0) return langs[0];
+    const single = map(navigator.language);
+    return single;
+}
+
 // Initialize i18n with proper loading
 const initI18n = async () => {
-	await init({
-		fallbackLocale: defaultLocale,
-		initialLocale: browser ? window.localStorage.getItem('locale') || defaultLocale : defaultLocale,
-		loadingDelay: 200,
-	});
+    const stored = browser ? window.localStorage.getItem('locale') : null;
+    const detected = detectBrowserLocale();
+    const initial = stored || detected || FALLBACK_LOCALE;
+    await init({
+        fallbackLocale: FALLBACK_LOCALE,
+        initialLocale: initial,
+        loadingDelay: 200,
+    });
 };
 
 // Initialize immediately

@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import { env } from '$env/dynamic/public';
+import { logout } from '$lib/auth';
 import type { components } from '$lib/api/generated/users-api';
 
 type User = components['schemas']['User'];
@@ -34,12 +35,15 @@ export class UserApiClient {
 			headers.Authorization = `Bearer ${token}`;
 		}
 
-		const response = await fetch(url, {
+        const response = await fetch(url, {
 			...options,
 			headers
 		});
 
-		if (!response.ok) {
+        if (!response.ok) {
+            if (response.status === 401 && browser) {
+                logout();
+            }
 			throw new Error(`API request failed: ${response.status} ${response.statusText}`);
 		}
 

@@ -110,5 +110,41 @@
     "english": "English",
     "russian": "Русский",
     "switchLanguage": "Switch Language"
+  },
+  "footer": {
+    "github": "GitHub",
+    "privacy": "Privacy Policy",
+    "githubAria": "Open Wili on GitHub"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: {date}",
+    "intro": "This Privacy Policy explains how Wili (\"we\", \"us\") collects, uses, and protects your information when you use our service.",
+    "sections": {
+      "collect": {
+        "title": "Information We Collect",
+        "body": "We collect your basic profile information from Yandex ID during authentication: display name, email, and avatar URL. We also store the wishlists and items you create."
+      },
+      "use": {
+        "title": "How We Use Information",
+        "body": "We use your information to provide and improve the wishlist service, personalize your experience, and maintain account security."
+      },
+      "share": {
+        "title": "Data Sharing",
+        "body": "We do not sell your personal data. We may share data with service providers strictly to operate the service, and only as necessary."
+      },
+      "security": {
+        "title": "Security",
+        "body": "We take reasonable measures to protect your data. However, no method of transmission over the Internet is 100% secure."
+      },
+      "choices": {
+        "title": "Your Choices",
+        "body": "You can update your profile information in the app. If you wish to delete your account and associated data, please contact us."
+      },
+      "contact": {
+        "title": "Contact",
+        "body": "If you have questions about this Privacy Policy, please open an issue on our GitHub repository."
+      }
+    }
   }
 }

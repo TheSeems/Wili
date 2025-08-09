@@ -79,10 +79,7 @@
 				aria-label="Login with Yandex"
 			>
 				<div class="flex items-center justify-center gap-2">
-					<svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-						<circle cx="12" cy="12" r="10" fill="#FF0000" />
-						<path d="M12 6c-1.6 0-2.7 1.1-2.7 2.6 0 1.3.8 2.1 1.9 2.5v6.8h1.6V11c1.1-.4 1.9-1.2 1.9-2.5C14.7 7.1 13.6 6 12 6z" fill="#fff"/>
-					</svg>
+					<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 26 26"><path fill="#F8604A" d="M26 13c0-7.18-5.82-13-13-13S0 5.82 0 13s5.82 13 13 13 13-5.82 13-13Z"></path><path fill="#fff" d="M17.55 20.822h-2.622V7.28h-1.321c-2.254 0-3.38 1.127-3.38 2.817 0 1.885.758 2.816 2.448 3.943l1.322.932-3.749 5.828H7.237l3.575-5.265c-2.059-1.495-3.185-2.817-3.185-5.265 0-3.012 2.058-5.07 6.023-5.07h3.9v15.622Z"></path></svg>
 					<T key="auth.loginWithYandex" fallback="Login with Yandex" />
 				</div>
 			</Button>
