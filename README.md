@@ -1,6 +1,6 @@
 # Wili
 
-Simple wishlist app to create and share lists of things you want.
+Simplistic wishlist app to create and share lists of things you want.
 
 ## Screenshots
 
@@ -11,7 +11,7 @@ Simple wishlist app to create and share lists of things you want.
 ## Links
 
 - [Wili website](https://wili.me)
-- [My wishlist](https://wili.me/wishlists/dde3f5be-a611-490d-823e-a27c24dbc32e)
+- [Sample wishlist](https://wili.me/wishlists/dde3f5be-a611-490d-823e-a27c24dbc32e)
 
 
 ## Features
