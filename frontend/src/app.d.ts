@@ -1,3 +1,3 @@
 /// <reference types="svelte" />
 
-declare module '*';
+declare module "*";

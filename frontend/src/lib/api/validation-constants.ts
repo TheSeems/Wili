@@ -1,9 +1,9 @@
 /**
  * Validation constants extracted from OpenAPI specification
  * This file is auto-generated. Do not edit manually.
- * 
+ *
  * Generated from: ..\backend\services\wishlist\openapi.yaml
- * Generated at: 2025-08-06T21:00:19.280Z
+ * Generated at: 2025-08-09T22:20:16.756Z
  */
 
 /** Item Name Min Length */
@@ -46,7 +46,7 @@ export const VALIDATION_CONSTANTS = {
 export const validation = {
   /** Validate item name */
   isValidItemName: (name: string): boolean => {
-    const trimmed = name?.trim() || '';
+    const trimmed = name?.trim() || "";
     return trimmed.length >= ITEM_NAME_MIN_LENGTH && trimmed.length <= ITEM_NAME_MAX_LENGTH;
   },
 
@@ -58,8 +58,10 @@ export const validation = {
 
   /** Validate wishlist title */
   isValidWishlistTitle: (title: string): boolean => {
-    const trimmed = title?.trim() || '';
-    return trimmed.length >= WISHLIST_TITLE_MIN_LENGTH && trimmed.length <= WISHLIST_TITLE_MAX_LENGTH;
+    const trimmed = title?.trim() || "";
+    return (
+      trimmed.length >= WISHLIST_TITLE_MIN_LENGTH && trimmed.length <= WISHLIST_TITLE_MAX_LENGTH
+    );
   },
 
   /** Validate wishlist description */
@@ -70,31 +72,31 @@ export const validation = {
 
   /** Get validation error i18n key for item name */
   getItemNameErrorKey: (name: string): string | null => {
-    const trimmed = name?.trim() || '';
-    if (trimmed.length === 0) return 'items.nameRequired';
-    if (trimmed.length > ITEM_NAME_MAX_LENGTH) return 'items.nameTooLong';
+    const trimmed = name?.trim() || "";
+    if (trimmed.length === 0) return "items.nameRequired";
+    if (trimmed.length > ITEM_NAME_MAX_LENGTH) return "items.nameTooLong";
     return null;
   },
 
   /** Get validation error i18n key for item description */
   getItemDescriptionErrorKey: (description?: string): string | null => {
     if (!description) return null;
-    if (description.length > ITEM_DESCRIPTION_MAX_LENGTH) return 'items.descriptionTooLong';
+    if (description.length > ITEM_DESCRIPTION_MAX_LENGTH) return "items.descriptionTooLong";
     return null;
   },
 
   /** Get validation error i18n key for wishlist title */
   getWishlistTitleErrorKey: (title: string): string | null => {
-    const trimmed = title?.trim() || '';
-    if (trimmed.length === 0) return 'wishlists.titleRequired';
-    if (trimmed.length > WISHLIST_TITLE_MAX_LENGTH) return 'wishlists.titleTooLong';
+    const trimmed = title?.trim() || "";
+    if (trimmed.length === 0) return "wishlists.titleRequired";
+    if (trimmed.length > WISHLIST_TITLE_MAX_LENGTH) return "wishlists.titleTooLong";
     return null;
   },
 
   /** Get validation error i18n key for wishlist description */
   getWishlistDescriptionErrorKey: (description?: string): string | null => {
     if (!description) return null;
-    if (description.length > WISHLIST_DESCRIPTION_MAX_LENGTH) return 'wishlists.descriptionTooLong';
+    if (description.length > WISHLIST_DESCRIPTION_MAX_LENGTH) return "wishlists.descriptionTooLong";
     return null;
   },
 } as const;
