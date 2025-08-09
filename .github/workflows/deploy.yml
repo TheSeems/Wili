@@ -40,12 +40,12 @@ jobs:
         cd ../wishlist
         go test ./...
 
-    #- name: Test Frontend
-    #  env:
-    #    PUBLIC_API_BASE_URL: https://api.wili.me
-    #  run: |
-    #    cd frontend
-    #    pnpm install --no-frozen-lockfile
+    - name: Test Frontend
+      run: |
+        cd frontend
+        if [ -f .env.example ]; then cp -f .env.example .env; fi
+        pnpm install --no-frozen-lockfile
+        pnpm test
 
   build:
     needs: test
@@ -168,6 +168,8 @@ jobs:
       run: |
         if [ "${{ needs.deploy.result }}" == "success" ]; then
           echo "✅ Deployment successful! Check https://wili.me"
+        elif [ "${{ needs.deploy.result }}" == "skipped" ]; then
+          echo "🚫 Deployment skipped!"
         else
           echo "❌ Deployment failed!"
           exit 1
