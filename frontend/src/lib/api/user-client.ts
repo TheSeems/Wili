@@ -1,11 +1,14 @@
 import { browser } from '$app/environment';
-import { PUBLIC_USER_API_BASE_URL } from '$env/static/public';
+import { env } from '$env/dynamic/public';
 import type { components } from '$lib/api/generated/users-api';
 
 type User = components['schemas']['User'];
 type YandexAuthRequest = components['schemas']['YandexAuthRequest'];
 type AuthResponse = components['schemas']['AuthResponse'];
 type UpdateUserRequest = components['schemas']['UpdateUserRequest'];
+
+// Resolve base URL from SvelteKit public env or Vite env, with localhost fallback
+const PUBLIC_USER_API_BASE_URL = env.PUBLIC_USER_API_BASE_URL ?? (import.meta as any).env?.VITE_USER_API_BASE_URL ?? 'http://localhost:8080';
 
 export class UserApiClient {
 	private baseUrl: string;

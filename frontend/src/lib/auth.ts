@@ -1,4 +1,4 @@
-import { PUBLIC_AUTH_API_BASE_URL } from '$env/static/public';
+import { env } from '$env/dynamic/public';
 import { browser } from '$app/environment';
 import { authStore } from './stores/auth';
 import type { components } from '$lib/api/generated/users-api';
@@ -6,6 +6,9 @@ import type { components } from '$lib/api/generated/users-api';
 export const TOKEN_KEY = 'wili_jwt';
 export const USER_KEY = 'wili_user';
 export const JUST_LOGGED_IN_KEY = 'wili_just_logged_in';
+
+// Prefer SvelteKit dynamic public env; fall back to Vite env at runtime
+const AUTH_API_BASE_URL = env.PUBLIC_AUTH_API_BASE_URL ?? (import.meta as any).env?.VITE_AUTH_API_BASE_URL ?? '';
 
 type AuthResponse = components['schemas']['AuthResponse'];
 
@@ -53,7 +56,7 @@ export function redirectToYandex() {
 
 export async function exchangeCode(code: string) {
 	const body = { code };
-			const res = await fetch(`${PUBLIC_AUTH_API_BASE_URL}/auth/yandex`, {
+			const res = await fetch(`${AUTH_API_BASE_URL}/auth/yandex`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(body)

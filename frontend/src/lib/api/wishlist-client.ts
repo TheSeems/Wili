@@ -1,4 +1,4 @@
-import { PUBLIC_WISHLIST_API_BASE_URL } from '$env/static/public';
+import { env } from '$env/dynamic/public';
 import type { components } from '$lib/api/generated/wishlist-api';
 
 type Wishlist = components['schemas']['Wishlist'];
@@ -7,6 +7,9 @@ type CreateWishlistRequest = components['schemas']['CreateWishlistRequest'];
 type UpdateWishlistRequest = components['schemas']['UpdateWishlistRequest'];
 type CreateWishlistItemRequest = components['schemas']['CreateWishlistItemRequest'];
 type UpdateWishlistItemRequest = components['schemas']['UpdateWishlistItemRequest'];
+
+// Resolve base URL from SvelteKit public env or Vite env, with localhost fallback
+const PUBLIC_WISHLIST_API_BASE_URL = env.PUBLIC_WISHLIST_API_BASE_URL ?? (import.meta as any).env?.VITE_WISHLIST_API_BASE_URL ?? 'http://localhost:8081';
 
 export class WishlistApiClient {
 	private baseUrl: string;

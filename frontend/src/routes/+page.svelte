@@ -75,9 +75,14 @@
 		{:else}
 			<Button 
 				onclick={redirectToYandexAuth}
-				class="mt-8 w-1/3 bg-red-700 hover:bg-red-800 text-white border-0"
+				class="mt-8 w-full sm:w-1/3 bg-black hover:bg-black/90 text-white border border-white/10"
+				aria-label="Login with Yandex"
 			>
 				<div class="flex items-center justify-center gap-2">
+					<svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+						<circle cx="12" cy="12" r="10" fill="#FF0000" />
+						<path d="M12 6c-1.6 0-2.7 1.1-2.7 2.6 0 1.3.8 2.1 1.9 2.5v6.8h1.6V11c1.1-.4 1.9-1.2 1.9-2.5C14.7 7.1 13.6 6 12 6z" fill="#fff"/>
+					</svg>
 					<T key="auth.loginWithYandex" fallback="Login with Yandex" />
 				</div>
 			</Button>
