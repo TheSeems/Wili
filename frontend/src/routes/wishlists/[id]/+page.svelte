@@ -555,8 +555,11 @@
                   <CardDescription>
                     <ExpandableText
                       content={item.data.description}
-                      maxHeight={300}
                       className="mt-2 text-muted-foreground"
+                      mobileFraction={0.7}
+                      desktopFraction={0.55}
+                      minMaxHeight={260}
+                      maxMaxHeight={640}
                     />
                   </CardDescription>
                 {/if}

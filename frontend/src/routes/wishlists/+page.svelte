@@ -96,7 +96,7 @@
 </svelte:head>
 
 <div class="container mx-auto px-4 py-8">
-  <div class="mb-8 flex items-center justify-between">
+  <div class="mb-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
     <div>
       <I18nText key="wishlists.title" fallback="Wishlists" tag="h1" class="text-3xl font-bold" />
       <p class="text-muted-foreground mt-2">
@@ -106,7 +106,7 @@
         />
       </p>
     </div>
-    <Button onclick={createWishlist} class="gap-2">
+    <Button onclick={createWishlist} class="gap-2 self-start md:self-auto">
       <PlusIcon class="h-4 w-4" />
       <T key="wishlists.createWishlist" fallback="Create Wishlist" />
     </Button>
