@@ -85,7 +85,8 @@
     "noItemsDescription": "No items yet",
     "titleRequired": "Wishlist title is required",
     "titleTooLong": "Wishlist title must not exceed 200 characters",
-    "descriptionTooLong": "Wishlist description must not exceed 2000 characters"
+    "descriptionTooLong": "Wishlist description must not exceed 2000 characters",
+    "disclaimer": "All links and other information presented on this page are provided by the user and do not reflect Wili's views or imply any affiliation, endorsement, or partnership."
   },
   "items": {
     "addItem": "Add Item",

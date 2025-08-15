@@ -604,5 +604,12 @@
         </p>
       </div>
     {/if}
+    <Separator class="my-6" />
+    <p class="text-muted-foreground text-xs">
+      <T
+        key="wishlists.disclaimer"
+        fallback="All links and other information presented on this page are provided by the user and do not reflect Wili's views or imply any affiliation, endorsement, or partnership."
+      />
+    </p>
   {/if}
 </div>
