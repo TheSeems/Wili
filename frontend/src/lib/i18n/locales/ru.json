@@ -114,7 +114,8 @@
   "footer": {
     "github": "GitHub",
     "privacy": "Политика конфиденциальности",
-    "githubAria": "Открыть Wili на GitHub"
+    "githubAria": "Открыть Wili на GitHub",
+    "telegram": "Telegram"
   },
   "privacy": {
     "title": "Политика конфиденциальности",

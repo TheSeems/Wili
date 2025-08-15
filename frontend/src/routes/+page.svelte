@@ -53,12 +53,12 @@
   {#if isLoading}
     <div class="flex flex-col items-center gap-4">
       <div class="h-12 w-12 animate-spin rounded-full border-b-2 border-gray-900"></div>
-      <p class="text-gray-600"><T key="common.loading" fallback="Loading..." /></p>
+      <p class="text-muted-foreground"><T key="common.loading" fallback="Loading..." /></p>
     </div>
   {:else}
     <h1 class="sr-only"><T key="home.title" fallback="Welcome to Wili" /></h1>
     <WiliLogo className="h-20 md:h-28 lg:h-32 mb-6" />
-    <p class="max-w-md text-center text-gray-600">
+    <p class="max-w-md text-center text-muted-foreground">
       <T
         key="home.description"
         fallback="Create and share wish-lists with friends, family, or anyone else."

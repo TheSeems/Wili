@@ -65,13 +65,32 @@
     <footer class="mt-10 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
       <div class="flex items-center justify-center gap-4 opacity-70">
         <a
+          href="https://t.me/wiliwish"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 hover:text-gray-700 dark:hover:text-gray-300"
+        >
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              fill="currentColor"
+              d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm5.403 7.206a.8.8 0 0 1 .277.777l-2.137 10.05c-.144.676-.566.838-1.148.52l-3.176-2.335-1.532 1.475c-.169.17-.31.312-.635.312l.228-3.228 5.873-5.304c.256-.228-.055-.356-.397-.128l-7.262 4.577-3.131-.978c-.68-.214-.693-.68.142-1.004l12.249-4.722c.568-.208 1.064.138.881 1.004z"
+            />
+          </svg>
+          <span class="sr-only"><T key="footer.telegram" fallback="Telegram" /></span>
+        </a>
+        <a
           href="https://github.com/theseems/wili"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-flex items-center gap-2 hover:text-gray-700 dark:hover:text-gray-300"
         >
           <svg
-            class="h-4 w-4"
+            class="h-5 w-5"
             viewBox="0 0 98 96"
             xmlns="http://www.w3.org/2000/svg"
             aria-hidden="true"
@@ -83,9 +102,10 @@
               fill="currentColor"
             />
           </svg>
-          <span><T key="footer.github" fallback="GitHub" /></span>
+          <span class="sr-only"><T key="footer.github" fallback="GitHub" /></span>
         </a>
-        <a href="/privacy" class="hover:text-gray-700 dark:hover:text-gray-300"
+        <span class="h-5 w-px bg-gray-300 dark:bg-gray-700" aria-hidden="true"></span>
+        <a href="/privacy" class="leading-5 hover:text-gray-700 dark:hover:text-gray-300"
           ><T key="footer.privacy" fallback="Privacy Policy" /></a
         >
       </div>
