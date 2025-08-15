@@ -58,3 +58,7 @@ From frontend/:
 ---
 
 Deployed with GitHub Actions to Yandex Cloud.
+
+## AI assistance
+
+Parts of this project were built with the help of AI coding tools to speed up development. All AI-suggested changes are reviewed and curated by the maintainer before merging.
