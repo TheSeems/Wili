@@ -30,6 +30,9 @@
   // Basic SEO defaults
   const defaultTitle = "Wili — Create and share wishlists";
   const defaultDescription = "Wili lets you create, manage, and share wishlists effortlessly.";
+  const ogImage = "/android-chrome-512x512.png";
+  const twitterCard = "summary_large_image";
+  const ogLocale = $derived($locale === "ru" ? "ru_RU" : "en_US");
   const pageTitle = $derived(
     page.url.pathname === "/privacy" ? "Privacy Policy — Wili" : defaultTitle
   );
@@ -45,12 +48,24 @@
   <meta property="og:title" content={pageTitle} />
   <meta property="og:description" content={defaultDescription} />
   <meta property="og:url" content={page.url.href} />
-  <meta property="og:image" content="/favicon.ico" />
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:locale" content={ogLocale} />
 
-  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:card" content={twitterCard} />
   <meta name="twitter:title" content={pageTitle} />
   <meta name="twitter:description" content={defaultDescription} />
-  <meta name="twitter:image" content="/favicon.ico" />
+  <meta name="twitter:image" content={ogImage} />
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+  <!-- JSON-LD: WebSite -->
+  {@html `<script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Wili",
+    url: page.url.origin,
+    inLanguage: $locale === "ru" ? "ru-RU" : "en-US",
+    description: defaultDescription
+  })}</script>`}
 </svelte:head>
 {#if i18nReady}
   {#if page.url.pathname !== "/auth/callback"}
