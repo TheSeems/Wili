@@ -17,7 +17,6 @@ import (
 func main() {
 	log.Printf("Starting Wili User Service...")
 
-	// Load environment variables
 	if err := godotenv.Load(); err != nil {
 		log.Printf("Warning: .env file not found: %v", err)
 	}
@@ -25,7 +24,6 @@ func main() {
 	r := chi.NewRouter()
 	devutil.EnableCORS(r)
 
-	// Add health endpoint
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -44,7 +42,6 @@ func main() {
 	srv := newServer(repo)
 	r.Mount("/", usergen.Handler(srv))
 
-	// optional swagger UI (mounted only with `go run -tags=dev`)
 	devutil.MountSwagger(r, "Wili User Service API")
 
 	port := getEnv("PORT", "8080")

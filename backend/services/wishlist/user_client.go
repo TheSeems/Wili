@@ -46,7 +46,6 @@ func NewUserClient(baseURL string) *UserClient {
 
 // ValidateToken calls the user service to validate a JWT token and extract user info
 func (c *UserClient) ValidateToken(ctx context.Context, token string) (*UserInfo, error) {
-	// Remove "Bearer " prefix if present
 	token = strings.TrimPrefix(token, "Bearer ")
 
 	log.Printf("[USER_CLIENT] Validating token with user service at %s", c.baseURL)

@@ -73,12 +73,11 @@ export async function exchangeCode(code: string) {
   const resp = (await res.json()) as AuthResponse;
 
   const token = resp.accessToken;
-  if (browser) {
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, JSON.stringify(resp.user));
-    localStorage.setItem(JUST_LOGGED_IN_KEY, "true");
-    // Update the auth store after successful login
-    authStore.set({
+	if (browser) {
+		localStorage.setItem(TOKEN_KEY, token);
+		localStorage.setItem(USER_KEY, JSON.stringify(resp.user));
+		localStorage.setItem(JUST_LOGGED_IN_KEY, "true");
+		authStore.set({
       token,
       user: resp.user,
       isLoading: false,
@@ -88,8 +87,7 @@ export async function exchangeCode(code: string) {
 }
 
 export function logout() {
-  // Clear local auth state and storage
-  if (browser) {
+	if (browser) {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(JUST_LOGGED_IN_KEY);

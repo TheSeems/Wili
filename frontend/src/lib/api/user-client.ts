@@ -18,7 +18,6 @@ export class UserApiClient {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
-    // Use provided baseUrl, or get from environment, or fallback to localhost
     this.baseUrl = baseUrl || "http://localhost:8080";
   }
 

@@ -49,7 +49,6 @@ func NewMongoRepo(uri, dbName string) (*MongoRepo, error) {
 		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}
 
-	// Test the connection
 	if err = client.Ping(ctx, nil); err != nil {
 		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
 	}
@@ -57,7 +56,6 @@ func NewMongoRepo(uri, dbName string) (*MongoRepo, error) {
 	db := client.Database(dbName)
 	wishlists := db.Collection("wishlists")
 
-	// Create indexes
 	_, err = wishlists.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.D{{Key: "userId", Value: 1}},
 	})
@@ -65,7 +63,6 @@ func NewMongoRepo(uri, dbName string) (*MongoRepo, error) {
 		return nil, fmt.Errorf("failed to create userId index: %w", err)
 	}
 
-	// Create UUID index for fast lookups
 	_, err = wishlists.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "uuid", Value: 1}},
 		Options: options.Index().SetUnique(true),
@@ -81,7 +78,6 @@ func NewMongoRepo(uri, dbName string) (*MongoRepo, error) {
 	}, nil
 }
 
-// Helper functions for UUID lookup
 func (r *MongoRepo) findByUUID(ctx context.Context, wishlistUUID openapi_types.UUID) (*mongoWishlist, error) {
 	var mw mongoWishlist
 	err := r.wishlists.FindOne(ctx, bson.M{"uuid": wishlistUUID.String()}).Decode(&mw)
@@ -309,7 +305,6 @@ func (r *MongoRepo) UpdateWishlist(ctx context.Context, wishlistID openapi_types
 }
 
 func (r *MongoRepo) convertToAPIWishlist(mw mongoWishlist) wishlistgen.Wishlist {
-	// Use the stored UUID
 	wishlistID := openapi_types.UUID(uuid.MustParse(mw.UUID))
 	userID := uuid.MustParse(mw.UserID)
 

@@ -33,7 +33,6 @@ func (s *WishlistServer) extractUserID(r *http.Request) (openapi_types.UUID, err
 		return openapi_types.UUID{}, fmt.Errorf("missing authorization header")
 	}
 
-	// Call user service to validate token and get user info
 	userInfo, err := s.userClient.ValidateToken(r.Context(), authHeader)
 	if err != nil {
 		s.logger.LogUnauthorized(r, "token_validation", fmt.Sprintf("token validation failed: %v", err))
@@ -110,7 +109,6 @@ func (s *WishlistServer) PostWishlists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate request
 	if validationErrors := ValidateCreateWishlistRequest(req); len(validationErrors) > 0 {
 		s.logger.LogValidationError(&userID, "create_wishlist", validationErrors)
 		s.writeValidationErrors(w, validationErrors)
@@ -192,7 +190,6 @@ func (s *WishlistServer) PostWishlistsWishlistIdItems(w http.ResponseWriter, r *
 		return
 	}
 
-	// Validate request
 	if validationErrors := ValidateCreateWishlistItemRequest(req); len(validationErrors) > 0 {
 		s.logger.LogValidationError(&userID, "add_item", validationErrors)
 		s.writeValidationErrors(w, validationErrors)
@@ -238,7 +235,6 @@ func (s *WishlistServer) PutWishlistsWishlistIdItemsItemId(w http.ResponseWriter
 		return
 	}
 
-	// Validate request
 	if validationErrors := ValidateUpdateWishlistItemRequest(req); len(validationErrors) > 0 {
 		s.logger.LogValidationError(&userID, "update_item", validationErrors)
 		s.writeValidationErrors(w, validationErrors)
@@ -304,14 +300,12 @@ func (s *WishlistServer) PutWishlistsWishlistId(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Validate request
 	if validationErrors := ValidateUpdateWishlistRequest(req); len(validationErrors) > 0 {
 		s.logger.LogValidationError(&userID, "update_wishlist", validationErrors)
 		s.writeValidationErrors(w, validationErrors)
 		return
 	}
 
-	// Get existing wishlist to update
 	existing, err := s.repo.GetWishlistByID(r.Context(), wishlistId)
 	if err != nil {
 		s.logger.LogError(&userID, "update_wishlist", err, fmt.Sprintf("failed to retrieve wishlist %s for update", wishlistId.String()))
@@ -325,14 +319,12 @@ func (s *WishlistServer) PutWishlistsWishlistId(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Check ownership
 	if existing.UserId != userID {
 		s.logger.LogUnauthorized(r, "update_wishlist", fmt.Sprintf("user %s attempted to update wishlist %s owned by %s", userID.String(), wishlistId.String(), existing.UserId.String()))
 		s.writeError(w, http.StatusUnauthorized, "Not authorized to update this wishlist")
 		return
 	}
 
-	// Update in database
 	title := existing.Title
 	if req.Title != nil {
 		title = *req.Title
@@ -345,7 +337,6 @@ func (s *WishlistServer) PutWishlistsWishlistId(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Get updated wishlist from database
 	updated, err := s.repo.GetWishlistByID(r.Context(), wishlistId)
 	if err != nil {
 		s.logger.LogError(&userID, "update_wishlist", err, fmt.Sprintf("failed to retrieve updated wishlist %s", wishlistId.String()))

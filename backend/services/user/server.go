@@ -69,8 +69,6 @@ func parseBearer(r *http.Request) (uuid.UUID, bool) {
 	return id, true
 }
 
-// ---- handlers -----
-
 func (s *server) PostAuthYandex(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[AUTH] Yandex auth request from %s", r.RemoteAddr)
 
@@ -81,7 +79,6 @@ func (s *server) PostAuthYandex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Exchange authorization code for access token
 	accessToken, err := s.exchangeYandexCode(req.Code)
 	if err != nil {
 		log.Printf("[AUTH] Failed to exchange Yandex code: %v", err)
@@ -89,7 +86,6 @@ func (s *server) PostAuthYandex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user info from Yandex
 	yandexUser, err := s.getYandexUserInfo(accessToken)
 	if err != nil {
 		log.Printf("[AUTH] Failed to get Yandex user info: %v", err)
@@ -97,7 +93,6 @@ func (s *server) PostAuthYandex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user already exists by email
 	var u *usergen.User
 	log.Printf("[AUTH] Checking for existing user with email: %s", yandexUser.DefaultEmail)
 	existingUser, err := s.repo.GetByEmail(r.Context(), yandexUser.DefaultEmail)
@@ -107,28 +102,23 @@ func (s *server) PostAuthYandex(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[AUTH] GetByEmail successful, existingUser is nil: %v", existingUser == nil)
 	}
 	if err == nil && existingUser != nil {
-		// User exists, update their info
 		log.Printf("[AUTH] Existing user found with email %s, ID: %s", yandexUser.DefaultEmail, existingUser.Id.String())
 		u = existingUser
 
-		// Update display name if it changed
 		if yandexUser.DisplayName != "" && yandexUser.DisplayName != u.DisplayName {
 			u.DisplayName = yandexUser.DisplayName
 		}
 
-		// Update email if not set
 		if u.Email == nil || *u.Email != types.Email(yandexUser.DefaultEmail) {
 			newEmail := types.Email(yandexUser.DefaultEmail)
 			u.Email = &newEmail
 		}
 
-		// Update avatar URL if available
 		if !yandexUser.IsAvatarEmpty && yandexUser.DefaultAvatarID != "" {
 			avatarURL := fmt.Sprintf("https://avatars.yandex.net/get-yapic/%s/islands-200", yandexUser.DefaultAvatarID)
 			u.AvatarUrl = &avatarURL
 		}
 	} else {
-		// Create new user from Yandex data
 		log.Printf("[AUTH] Creating new user with email %s", yandexUser.DefaultEmail)
 		newEmail := types.Email(yandexUser.DefaultEmail)
 		newUser := usergen.User{
@@ -137,13 +127,11 @@ func (s *server) PostAuthYandex(w http.ResponseWriter, r *http.Request) {
 			Email:       &newEmail,
 		}
 
-		// Set avatar URL if available
 		if !yandexUser.IsAvatarEmpty && yandexUser.DefaultAvatarID != "" {
 			avatarURL := fmt.Sprintf("https://avatars.yandex.net/get-yapic/%s/islands-200", yandexUser.DefaultAvatarID)
 			newUser.AvatarUrl = &avatarURL
 		}
 
-		// Use email as display name if display name is empty
 		if newUser.DisplayName == "" {
 			if yandexUser.DefaultEmail != "" {
 				newUser.DisplayName = yandexUser.DefaultEmail
@@ -159,7 +147,6 @@ func (s *server) PostAuthYandex(w http.ResponseWriter, r *http.Request) {
 		u = &newUser
 	}
 
-	// Store the user with email
 	err = s.repo.UpsertWithEmail(r.Context(), u, yandexUser.DefaultEmail)
 	if err != nil {
 		log.Printf("[AUTH] Failed to save user: %v", err)
@@ -227,7 +214,6 @@ func (s *server) PutUsersMe(w http.ResponseWriter, r *http.Request) {
 func (s *server) PostAuthValidate(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[VALIDATE] Token validation request from %s", r.RemoteAddr)
 
-	// For now, use a simple struct until we regenerate the types
 	type validateReq struct {
 		Token string `json:"token"`
 	}
@@ -244,7 +230,6 @@ func (s *server) PostAuthValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse and validate the JWT token
 	token, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -261,7 +246,6 @@ func (s *server) PostAuthValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract user ID from token claims
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		log.Printf("[VALIDATE] Invalid token claims")
@@ -292,7 +276,6 @@ func (s *server) PostAuthValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from repository
 	user, err := s.repo.Get(r.Context(), userID)
 	if err != nil {
 		log.Printf("[VALIDATE] Failed to get user %s: %v", userID.String(), err)
@@ -341,7 +324,6 @@ func (s *server) exchangeYandexCode(code string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		// Log the response body for debugging
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		log.Printf("[AUTH] Token exchange failed: %d - %s", resp.StatusCode, string(bodyBytes))
 		return "", fmt.Errorf("token exchange failed with status: %d", resp.StatusCode)

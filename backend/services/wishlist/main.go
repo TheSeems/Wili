@@ -15,17 +15,14 @@ import (
 )
 
 func main() {
-	// Initialize logger
 	logger := NewLogger("WISHLIST")
 
 	log.Printf("Starting Wili Wishlist Service...")
 
-	// Load environment variables
 	if err := godotenv.Load(); err != nil {
 		log.Printf("Warning: .env file not found: %v", err)
 	}
 
-	// Get environment variables with defaults
 	mongoURI := getEnv("MONGODB_URI", "")
 	if mongoURI == "" {
 		panic("MONGODB_URI is not set")
@@ -42,7 +39,6 @@ func main() {
 	port := getEnv("PORT", "8081")
 	addr := ":" + port
 
-	// Initialize MongoDB repository
 	repo, err := NewMongoRepo(mongoURI, dbName)
 	if err != nil {
 		log.Fatalf("Failed to initialize MongoDB repository: %v", err)
@@ -55,17 +51,12 @@ func main() {
 		}
 	}()
 
-	// Initialize user service client
 	userClient := NewUserClient(userServiceURL)
-
-	// Initialize server
 	server := NewWishlistServer(repo, userClient)
 
-	// Setup router
 	r := chi.NewRouter()
 	devutil.EnableCORS(r)
 
-	// Add health endpoint
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -76,10 +67,7 @@ func main() {
 		})
 	})
 
-	// Mount API routes
 	r.Mount("/", wishlistgen.Handler(server))
-
-	// Mount Swagger UI for development
 	devutil.MountSwagger(r, "Wili Wishlist Service API")
 
 	logger.LogStartup(addr, mongoURI+"/"+dbName)

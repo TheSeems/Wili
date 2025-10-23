@@ -8,7 +8,6 @@ import (
 	wishlistgen "github.com/theseems/wili/backend/services/wishlist/gen"
 )
 
-// Validation constants
 const (
 	MaxWishlistTitleLength       = 200
 	MaxWishlistDescriptionLength = 2000
@@ -35,7 +34,7 @@ func (v ValidationErrors) Error() string {
 	if len(v) == 0 {
 		return "no validation errors"
 	}
-	
+
 	var messages []string
 	for _, err := range v {
 		messages = append(messages, err.Error())
@@ -47,12 +46,10 @@ func (v ValidationErrors) Error() string {
 func ValidateCreateWishlistRequest(req wishlistgen.CreateWishlistRequest) ValidationErrors {
 	var errors ValidationErrors
 
-	// Validate title
 	if err := validateStringField("title", req.Title, MinWishlistTitleLength, MaxWishlistTitleLength, true); err != nil {
 		errors = append(errors, *err)
 	}
 
-	// Validate description if provided
 	if req.Description != nil {
 		if err := validateStringField("description", *req.Description, 0, MaxWishlistDescriptionLength, false); err != nil {
 			errors = append(errors, *err)
@@ -66,7 +63,6 @@ func ValidateCreateWishlistRequest(req wishlistgen.CreateWishlistRequest) Valida
 func ValidateUpdateWishlistRequest(req wishlistgen.UpdateWishlistRequest) ValidationErrors {
 	var errors ValidationErrors
 
-	// Validate title if provided
 	if req.Title != nil {
 		if err := validateStringField("title", *req.Title, MinWishlistTitleLength, MaxWishlistTitleLength, true); err != nil {
 			errors = append(errors, *err)
@@ -87,12 +83,10 @@ func ValidateUpdateWishlistRequest(req wishlistgen.UpdateWishlistRequest) Valida
 func ValidateCreateWishlistItemRequest(req wishlistgen.CreateWishlistItemRequest) ValidationErrors {
 	var errors ValidationErrors
 
-	// Validate type
 	if err := validateStringField("type", req.Type, 1, 50, true); err != nil {
 		errors = append(errors, *err)
 	}
 
-	// Validate data payload
 	if dataErrors := validateItemData(req.Data); len(dataErrors) > 0 {
 		errors = append(errors, dataErrors...)
 	}
@@ -104,7 +98,6 @@ func ValidateCreateWishlistItemRequest(req wishlistgen.CreateWishlistItemRequest
 func ValidateUpdateWishlistItemRequest(req wishlistgen.UpdateWishlistItemRequest) ValidationErrors {
 	var errors ValidationErrors
 
-	// Validate type if provided
 	if req.Type != nil {
 		if err := validateStringField("type", *req.Type, 1, 50, true); err != nil {
 			errors = append(errors, *err)
@@ -125,7 +118,6 @@ func ValidateUpdateWishlistItemRequest(req wishlistgen.UpdateWishlistItemRequest
 func validateItemData(data map[string]interface{}) ValidationErrors {
 	var errors ValidationErrors
 
-	// Check if name exists and is a string
 	nameRaw, hasName := data["name"]
 	if !hasName {
 		errors = append(errors, ValidationError{
@@ -146,7 +138,6 @@ func validateItemData(data map[string]interface{}) ValidationErrors {
 		}
 	}
 
-	// Check if description exists and is a string (description is optional)
 	descRaw, hasDesc := data["description"]
 	if hasDesc {
 		descStr, isString := descRaw.(string)
@@ -162,8 +153,6 @@ func validateItemData(data map[string]interface{}) ValidationErrors {
 		}
 	}
 
-	// Validate any additional fields based on item type
-	// For now, we allow additional fields but validate known ones
 	if urlRaw, hasURL := data["url"]; hasURL {
 		if urlStr, isString := urlRaw.(string); isString && urlStr != "" {
 			if !isValidURL(urlStr) {
@@ -178,9 +167,7 @@ func validateItemData(data map[string]interface{}) ValidationErrors {
 	return errors
 }
 
-// validateStringField validates a string field with length constraints
 func validateStringField(fieldName, value string, minLength, maxLength int, required bool) *ValidationError {
-	// Check if field is required
 	if required && strings.TrimSpace(value) == "" {
 		return &ValidationError{
 			Field:   fieldName,
@@ -188,12 +175,10 @@ func validateStringField(fieldName, value string, minLength, maxLength int, requ
 		}
 	}
 
-	// If field is not required and empty, skip further validation
 	if !required && strings.TrimSpace(value) == "" {
 		return nil
 	}
 
-	// Check minimum length
 	if minLength > 0 && utf8.RuneCountInString(value) < minLength {
 		return &ValidationError{
 			Field:   fieldName,
@@ -201,7 +186,6 @@ func validateStringField(fieldName, value string, minLength, maxLength int, requ
 		}
 	}
 
-	// Check maximum length
 	if maxLength > 0 && utf8.RuneCountInString(value) > maxLength {
 		return &ValidationError{
 			Field:   fieldName,
@@ -212,7 +196,6 @@ func validateStringField(fieldName, value string, minLength, maxLength int, requ
 	return nil
 }
 
-// isValidURL performs basic URL validation
 func isValidURL(urlStr string) bool {
 	urlStr = strings.TrimSpace(urlStr)
 	return strings.HasPrefix(urlStr, "http://") || strings.HasPrefix(urlStr, "https://")

@@ -19,7 +19,6 @@ export class WishlistApiClient {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
-    // Use provided baseUrl, or get from environment, or fallback to localhost
     this.baseUrl = baseUrl || "http://localhost:8081";
   }
 
@@ -58,7 +57,6 @@ export class WishlistApiClient {
       return undefined as T;
     }
 
-    // Check if response has content before parsing JSON
     const text = await response.text();
     if (!text) {
       return undefined as T;

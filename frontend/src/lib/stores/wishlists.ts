@@ -19,7 +19,6 @@ const initialState: WishlistStore = {
 
 export const wishlistStore = writable<WishlistStore>(initialState);
 
-// Helper functions
 export const wishlistActions = {
   setLoading: (loading: boolean) => {
     wishlistStore.update((state) => ({ ...state, loading }));
