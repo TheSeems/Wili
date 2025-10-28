@@ -5,6 +5,7 @@ package wishlist_server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -18,28 +19,113 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// BookItemRequest defines model for BookItemRequest.
+type BookItemRequest struct {
+	// BookerName Optional name of the person booking the item. If not provided, booking will be anonymous.
+	BookerName *string `json:"bookerName,omitempty"`
+
+	// Message Optional message from the booker to the wishlist owner.
+	Message *string `json:"message,omitempty"`
+}
+
+// BookItemResponse defines model for BookItemResponse.
+type BookItemResponse struct {
+	// BookedAt When the item was booked
+	BookedAt time.Time `json:"bookedAt"`
+
+	// BookerName Name of the person who booked the item (null for anonymous bookings)
+	BookerName *string `json:"bookerName"`
+
+	// BookingId Unique identifier for this booking
+	BookingId openapi_types.UUID `json:"bookingId"`
+
+	// CancellationToken Secret token that allows the booker to cancel their booking. Store this securely!
+	CancellationToken openapi_types.UUID `json:"cancellationToken"`
+
+	// Message Optional message from the booker
+	Message *string `json:"message"`
+}
+
+// ConflictErrorResponse defines model for ConflictErrorResponse.
+type ConflictErrorResponse struct {
+	// Error Error type
+	Error string `json:"error"`
+
+	// Message Detailed error message
+	Message string `json:"message"`
+}
+
 // CreateWishlistItemRequest defines model for CreateWishlistItemRequest.
 type CreateWishlistItemRequest struct {
-	Data map[string]interface{} `json:"data"`
-	Type string                 `json:"type"`
+	// Data Item-specific data payload. All items must have a name.
+	// Description and other properties are optional to support different item types
+	// (e.g., marketplace items with SKU, price, etc.).
+	Data WishlistItemData `json:"data"`
+
+	// Type Item type discriminator
+	Type string `json:"type"`
 }
 
 // CreateWishlistRequest defines model for CreateWishlistRequest.
 type CreateWishlistRequest struct {
+	// Description Optional wishlist description
 	Description *string `json:"description"`
-	Title       string  `json:"title"`
+
+	// Title Wishlist title
+	Title string `json:"title"`
+}
+
+// ItemBooking defines model for ItemBooking.
+type ItemBooking struct {
+	// BookedAt When the item was booked
+	BookedAt time.Time `json:"bookedAt"`
+
+	// BookerName Name of the person who booked the item (null for anonymous bookings)
+	BookerName *string `json:"bookerName"`
+
+	// BookingId Unique identifier for this booking
+	BookingId openapi_types.UUID `json:"bookingId"`
+
+	// Message Optional message from the booker
+	Message *string `json:"message"`
 }
 
 // UpdateWishlistItemRequest defines model for UpdateWishlistItemRequest.
 type UpdateWishlistItemRequest struct {
-	Data *map[string]interface{} `json:"data,omitempty"`
-	Type *string                 `json:"type,omitempty"`
+	// Data Item-specific data payload. All items must have a name.
+	// Description and other properties are optional to support different item types
+	// (e.g., marketplace items with SKU, price, etc.).
+	Data *WishlistItemData `json:"data,omitempty"`
+
+	// Type Updated item type discriminator
+	Type *string `json:"type,omitempty"`
 }
 
 // UpdateWishlistRequest defines model for UpdateWishlistRequest.
 type UpdateWishlistRequest struct {
+	// Description Updated wishlist description
 	Description *string `json:"description"`
-	Title       *string `json:"title,omitempty"`
+
+	// Title Updated wishlist title
+	Title *string `json:"title,omitempty"`
+}
+
+// ValidationError defines model for ValidationError.
+type ValidationError struct {
+	// Field Name of the field that failed validation
+	Field string `json:"field"`
+
+	// Message Detailed error message for the field
+	Message string `json:"message"`
+}
+
+// ValidationErrorResponse defines model for ValidationErrorResponse.
+type ValidationErrorResponse struct {
+	// Details Detailed validation errors
+	Details []ValidationError `json:"details"`
+
+	// Error General error message
+	Error string `json:"error"`
 }
 
 // Wishlist defines model for Wishlist.
@@ -55,15 +141,42 @@ type Wishlist struct {
 
 // WishlistItem defines model for WishlistItem.
 type WishlistItem struct {
-	CreatedAt *time.Time `json:"createdAt,omitempty"`
+	Booking   *ItemBooking `json:"booking,omitempty"`
+	CreatedAt *time.Time   `json:"createdAt,omitempty"`
 
-	// Data Item-specific payload
-	Data map[string]interface{} `json:"data"`
-	Id   openapi_types.UUID     `json:"id"`
+	// Data Item-specific data payload. All items must have a name.
+	// Description and other properties are optional to support different item types
+	// (e.g., marketplace items with SKU, price, etc.).
+	Data WishlistItemData   `json:"data"`
+	Id   openapi_types.UUID `json:"id"`
 
 	// Type Discriminator for item type (e.g., "text", "marketplace")
 	Type      string     `json:"type"`
 	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+}
+
+// WishlistItemData Item-specific data payload. All items must have a name.
+// Description and other properties are optional to support different item types
+// (e.g., marketplace items with SKU, price, etc.).
+type WishlistItemData struct {
+	// Description Optional description of the wishlist item
+	Description *string `json:"description,omitempty"`
+
+	// Name Name of the wishlist item
+	Name string `json:"name"`
+
+	// Url Optional URL associated with the item
+	Url                  *string                `json:"url,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeleteWishlistsWishlistIdItemsItemIdUnbookParams defines parameters for DeleteWishlistsWishlistIdItemsItemIdUnbook.
+type DeleteWishlistsWishlistIdItemsItemIdUnbookParams struct {
+	// BookingId ID of the booking to unbook (for wishlist owner)
+	BookingId *openapi_types.UUID `form:"bookingId,omitempty" json:"bookingId,omitempty"`
+
+	// CancellationToken Cancellation token received when booking (for booker)
+	CancellationToken *openapi_types.UUID `form:"cancellationToken,omitempty" json:"cancellationToken,omitempty"`
 }
 
 // PostWishlistsJSONRequestBody defines body for PostWishlists for application/json ContentType.
@@ -77,6 +190,105 @@ type PostWishlistsWishlistIdItemsJSONRequestBody = CreateWishlistItemRequest
 
 // PutWishlistsWishlistIdItemsItemIdJSONRequestBody defines body for PutWishlistsWishlistIdItemsItemId for application/json ContentType.
 type PutWishlistsWishlistIdItemsItemIdJSONRequestBody = UpdateWishlistItemRequest
+
+// PostWishlistsWishlistIdItemsItemIdBookJSONRequestBody defines body for PostWishlistsWishlistIdItemsItemIdBook for application/json ContentType.
+type PostWishlistsWishlistIdItemsItemIdBookJSONRequestBody = BookItemRequest
+
+// Getter for additional properties for WishlistItemData. Returns the specified
+// element and whether it was found
+func (a WishlistItemData) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for WishlistItemData
+func (a *WishlistItemData) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for WishlistItemData to handle AdditionalProperties
+func (a *WishlistItemData) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["description"]; found {
+		err = json.Unmarshal(raw, &a.Description)
+		if err != nil {
+			return fmt.Errorf("error reading 'description': %w", err)
+		}
+		delete(object, "description")
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if raw, found := object["url"]; found {
+		err = json.Unmarshal(raw, &a.Url)
+		if err != nil {
+			return fmt.Errorf("error reading 'url': %w", err)
+		}
+		delete(object, "url")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for WishlistItemData to handle AdditionalProperties
+func (a WishlistItemData) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Description != nil {
+		object["description"], err = json.Marshal(a.Description)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'description': %w", err)
+		}
+	}
+
+	object["name"], err = json.Marshal(a.Name)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'name': %w", err)
+	}
+
+	if a.Url != nil {
+		object["url"], err = json.Marshal(a.Url)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'url': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -104,6 +316,12 @@ type ServerInterface interface {
 	// Update a wishlist item (owner only)
 	// (PUT /wishlists/{wishlistId}/items/{itemId})
 	PutWishlistsWishlistIdItemsItemId(w http.ResponseWriter, r *http.Request, wishlistId openapi_types.UUID, itemId openapi_types.UUID)
+	// Book a wishlist item (public endpoint)
+	// (POST /wishlists/{wishlistId}/items/{itemId}/book)
+	PostWishlistsWishlistIdItemsItemIdBook(w http.ResponseWriter, r *http.Request, wishlistId openapi_types.UUID, itemId openapi_types.UUID)
+	// Unbook a wishlist item
+	// (DELETE /wishlists/{wishlistId}/items/{itemId}/unbook)
+	DeleteWishlistsWishlistIdItemsItemIdUnbook(w http.ResponseWriter, r *http.Request, wishlistId openapi_types.UUID, itemId openapi_types.UUID, params DeleteWishlistsWishlistIdItemsItemIdUnbookParams)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -155,6 +373,18 @@ func (_ Unimplemented) DeleteWishlistsWishlistIdItemsItemId(w http.ResponseWrite
 // Update a wishlist item (owner only)
 // (PUT /wishlists/{wishlistId}/items/{itemId})
 func (_ Unimplemented) PutWishlistsWishlistIdItemsItemId(w http.ResponseWriter, r *http.Request, wishlistId openapi_types.UUID, itemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Book a wishlist item (public endpoint)
+// (POST /wishlists/{wishlistId}/items/{itemId}/book)
+func (_ Unimplemented) PostWishlistsWishlistIdItemsItemIdBook(w http.ResponseWriter, r *http.Request, wishlistId openapi_types.UUID, itemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Unbook a wishlist item
+// (DELETE /wishlists/{wishlistId}/items/{itemId}/unbook)
+func (_ Unimplemented) DeleteWishlistsWishlistIdItemsItemIdUnbook(w http.ResponseWriter, r *http.Request, wishlistId openapi_types.UUID, itemId openapi_types.UUID, params DeleteWishlistsWishlistIdItemsItemIdUnbookParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -411,6 +641,105 @@ func (siw *ServerInterfaceWrapper) PutWishlistsWishlistIdItemsItemId(w http.Resp
 	handler.ServeHTTP(w, r)
 }
 
+// PostWishlistsWishlistIdItemsItemIdBook operation middleware
+func (siw *ServerInterfaceWrapper) PostWishlistsWishlistIdItemsItemIdBook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wishlistId" -------------
+	var wishlistId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wishlistId", chi.URLParam(r, "wishlistId"), &wishlistId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wishlistId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "itemId" -------------
+	var itemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "itemId", chi.URLParam(r, "itemId"), &itemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "itemId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostWishlistsWishlistIdItemsItemIdBook(w, r, wishlistId, itemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteWishlistsWishlistIdItemsItemIdUnbook operation middleware
+func (siw *ServerInterfaceWrapper) DeleteWishlistsWishlistIdItemsItemIdUnbook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "wishlistId" -------------
+	var wishlistId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "wishlistId", chi.URLParam(r, "wishlistId"), &wishlistId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "wishlistId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "itemId" -------------
+	var itemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "itemId", chi.URLParam(r, "itemId"), &itemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "itemId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteWishlistsWishlistIdItemsItemIdUnbookParams
+
+	// ------------- Optional query parameter "bookingId" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "bookingId", r.URL.Query(), &params.BookingId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bookingId", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cancellationToken" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "cancellationToken", r.URL.Query(), &params.CancellationToken)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cancellationToken", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteWishlistsWishlistIdItemsItemIdUnbook(w, r, wishlistId, itemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -547,6 +876,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/wishlists/{wishlistId}/items/{itemId}", wrapper.PutWishlistsWishlistIdItemsItemId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/wishlists/{wishlistId}/items/{itemId}/book", wrapper.PostWishlistsWishlistIdItemsItemIdBook)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/wishlists/{wishlistId}/items/{itemId}/unbook", wrapper.DeleteWishlistsWishlistIdItemsItemIdUnbook)
 	})
 
 	return r

@@ -1,0 +1,7 @@
+---
+globs: frontend/*
+alwaysApply: false
+---
+When developing frontend:
+- Any user available messages must be i18n'ed at least for Russian and English
+- Frontend uses specs from backend to create and maintain clients

@@ -36,8 +36,17 @@ type mongoWishlistItem struct {
 	ID        string                 `bson:"id"`
 	Type      string                 `bson:"type"`
 	Data      map[string]interface{} `bson:"data"`
+	Booking   *mongoItemBooking      `bson:"booking,omitempty"`
 	CreatedAt time.Time              `bson:"createdAt"`
 	UpdatedAt time.Time              `bson:"updatedAt"`
+}
+
+type mongoItemBooking struct {
+	BookingID         string    `bson:"bookingId"`
+	CancellationToken string    `bson:"cancellationToken"`
+	BookerName        *string   `bson:"bookerName,omitempty"`
+	Message           *string   `bson:"message,omitempty"`
+	BookedAt          time.Time `bson:"bookedAt"`
 }
 
 func NewMongoRepo(uri, dbName string) (*MongoRepo, error) {
@@ -176,7 +185,7 @@ func (r *MongoRepo) AddItemToWishlist(ctx context.Context, wishlistID openapi_ty
 	item := mongoWishlistItem{
 		ID:        itemID.String(),
 		Type:      req.Type,
-		Data:      req.Data,
+		Data:      convertWishlistItemDataToMap(req.Data),
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -311,10 +320,23 @@ func (r *MongoRepo) convertToAPIWishlist(mw mongoWishlist) wishlistgen.Wishlist 
 	items := make([]wishlistgen.WishlistItem, len(mw.Items))
 	for i, item := range mw.Items {
 		itemID := uuid.MustParse(item.ID)
+
+		var booking *wishlistgen.ItemBooking
+		if item.Booking != nil {
+			bookingID := uuid.MustParse(item.Booking.BookingID)
+			booking = &wishlistgen.ItemBooking{
+				BookingId:  bookingID,
+				BookerName: item.Booking.BookerName,
+				Message:    item.Booking.Message,
+				BookedAt:   item.Booking.BookedAt,
+			}
+		}
+
 		items[i] = wishlistgen.WishlistItem{
 			Id:        itemID,
 			Type:      item.Type,
-			Data:      item.Data,
+			Data:      convertMapToWishlistItemData(item.Data),
+			Booking:   booking,
 			CreatedAt: &item.CreatedAt,
 			UpdatedAt: &item.UpdatedAt,
 		}
@@ -329,6 +351,170 @@ func (r *MongoRepo) convertToAPIWishlist(mw mongoWishlist) wishlistgen.Wishlist 
 		CreatedAt:   mw.CreatedAt,
 		UpdatedAt:   mw.UpdatedAt,
 	}
+}
+
+func (r *MongoRepo) BookItem(ctx context.Context, wishlistID, itemID openapi_types.UUID, req wishlistgen.BookItemRequest) (*wishlistgen.BookItemResponse, error) {
+	now := time.Now()
+	bookingID := uuid.New()
+	cancellationToken := uuid.New()
+
+	booking := mongoItemBooking{
+		BookingID:         bookingID.String(),
+		CancellationToken: cancellationToken.String(),
+		BookerName:        req.BookerName,
+		Message:           req.Message,
+		BookedAt:          now,
+	}
+
+	filter := bson.M{
+		"uuid":     wishlistID.String(),
+		"items.id": itemID.String(),
+	}
+
+	var existing mongoWishlist
+	err := r.wishlists.FindOne(ctx, filter).Decode(&existing)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, fmt.Errorf("wishlist or item not found")
+		}
+		return nil, fmt.Errorf("failed to find wishlist: %w", err)
+	}
+
+	for _, item := range existing.Items {
+		if item.ID == itemID.String() {
+			if item.Booking != nil {
+				return nil, fmt.Errorf("item is already booked")
+			}
+			break
+		}
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"items.$.booking":   booking,
+			"items.$.updatedAt": now,
+			"updatedAt":         now,
+		},
+	}
+
+	result, err := r.wishlists.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return nil, fmt.Errorf("failed to book item: %w", err)
+	}
+
+	if result.ModifiedCount == 0 {
+		return nil, fmt.Errorf("wishlist or item not found")
+	}
+
+	return &wishlistgen.BookItemResponse{
+		BookingId:         bookingID,
+		CancellationToken: cancellationToken,
+		BookerName:        req.BookerName,
+		Message:           req.Message,
+		BookedAt:          now,
+	}, nil
+}
+
+func (r *MongoRepo) UnbookItem(ctx context.Context, wishlistID, itemID, bookingID openapi_types.UUID) error {
+	now := time.Now()
+
+	filter := bson.M{
+		"uuid":                    wishlistID.String(),
+		"items.id":                itemID.String(),
+		"items.booking.bookingId": bookingID.String(),
+	}
+
+	update := bson.M{
+		"$unset": bson.M{
+			"items.$.booking": "",
+		},
+		"$set": bson.M{
+			"items.$.updatedAt": now,
+			"updatedAt":         now,
+		},
+	}
+
+	result, err := r.wishlists.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to unbook item: %w", err)
+	}
+
+	if result.ModifiedCount == 0 {
+		return fmt.Errorf("wishlist, item, or booking not found")
+	}
+
+	return nil
+}
+
+func (r *MongoRepo) UnbookItemByToken(ctx context.Context, wishlistID, itemID openapi_types.UUID, cancellationToken string) error {
+	now := time.Now()
+
+	filter := bson.M{
+		"uuid":                            wishlistID.String(),
+		"items.id":                        itemID.String(),
+		"items.booking.cancellationToken": cancellationToken,
+	}
+
+	update := bson.M{
+		"$unset": bson.M{
+			"items.$.booking": "",
+		},
+		"$set": bson.M{
+			"items.$.updatedAt": now,
+			"updatedAt":         now,
+		},
+	}
+
+	result, err := r.wishlists.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to unbook item: %w", err)
+	}
+
+	if result.ModifiedCount == 0 {
+		return fmt.Errorf("wishlist, item, or booking not found (invalid token)")
+	}
+
+	return nil
+}
+
+func convertWishlistItemDataToMap(data wishlistgen.WishlistItemData) map[string]interface{} {
+	result := make(map[string]interface{})
+	result["name"] = data.Name
+	if data.Description != nil {
+		result["description"] = *data.Description
+	}
+	if data.Url != nil {
+		result["url"] = *data.Url
+	}
+	for k, v := range data.AdditionalProperties {
+		result[k] = v
+	}
+	return result
+}
+
+func convertMapToWishlistItemData(data map[string]interface{}) wishlistgen.WishlistItemData {
+	result := wishlistgen.WishlistItemData{
+		AdditionalProperties: make(map[string]interface{}),
+	}
+
+	if name, ok := data["name"].(string); ok {
+		result.Name = name
+	}
+	if desc, ok := data["description"].(string); ok {
+		result.Description = &desc
+	}
+	if url, ok := data["url"].(string); ok {
+		result.Url = &url
+	}
+
+	// Copy additional properties
+	for k, v := range data {
+		if k != "name" && k != "description" && k != "url" {
+			result.AdditionalProperties[k] = v
+		}
+	}
+
+	return result
 }
 
 func (r *MongoRepo) Close(ctx context.Context) error {

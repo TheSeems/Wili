@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+Don't leave unnecessary or over-explanatory comments, code should be self-expanatory. Keep flow simple.

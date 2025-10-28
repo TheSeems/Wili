@@ -3,6 +3,7 @@
  * Do not make direct changes to the file.
  */
 
+
 export interface paths {
   "/wishlists": {
     /** List wishlists of the authenticated user */
@@ -235,6 +236,90 @@ export interface paths {
       };
     };
   };
+  "/wishlists/{wishlistId}/items/{itemId}/book": {
+    /**
+     * Book a wishlist item (public endpoint)
+     * @description Book a wishlist item. This endpoint is public and allows anonymous users
+     * to book items by providing a custom name or booking anonymously.
+     */
+    post: {
+      parameters: {
+        path: {
+          wishlistId: string;
+          itemId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["BookItemRequest"];
+        };
+      };
+      responses: {
+        /** @description Item booked successfully */
+        200: {
+          content: {
+            "application/json": components["schemas"]["BookItemResponse"];
+          };
+        };
+        /** @description Invalid input or validation error */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ValidationErrorResponse"];
+          };
+        };
+        /** @description Wishlist or item not found */
+        404: {
+          content: never;
+        };
+        /** @description Item is already booked */
+        409: {
+          content: {
+            "application/json": components["schemas"]["ConflictErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/wishlists/{wishlistId}/items/{itemId}/unbook": {
+    /**
+     * Unbook a wishlist item
+     * @description Remove a booking from a wishlist item.
+     * - Wishlist owner can unbook any item by providing bookingId (requires auth)
+     * - Booker can unbook their own booking by providing cancellationToken (no auth required)
+     */
+    delete: {
+      parameters: {
+        query?: {
+          /** @description ID of the booking to unbook (for wishlist owner) */
+          bookingId?: string;
+          /** @description Cancellation token received when booking (for booker) */
+          cancellationToken?: string;
+        };
+        path: {
+          wishlistId: string;
+          itemId: string;
+        };
+      };
+      responses: {
+        /** @description Item unbooked successfully */
+        204: {
+          content: never;
+        };
+        /** @description Invalid request - must provide either bookingId or cancellationToken */
+        400: {
+          content: never;
+        };
+        /** @description Not authorized to unbook this item */
+        403: {
+          content: never;
+        };
+        /** @description Wishlist, item, or booking not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -271,8 +356,13 @@ export interface components {
       id: string;
       /** @description Discriminator for item type (e.g., "text", "marketplace") */
       type: string;
-      /** Format: date-time */
       data: components["schemas"]["WishlistItemData"];
+      /** @description Current booking information for this item (null if not booked) */
+      booking?: components["schemas"]["ItemBooking"];
+      /** Format: date-time */
+      createdAt?: string;
+      /** Format: date-time */
+      updatedAt?: string;
     };
     CreateWishlistItemRequest: {
       /** @description Item type discriminator */
@@ -312,6 +402,55 @@ export interface components {
       field: string;
       /** @description Detailed error message for the field */
       message: string;
+    };
+    BookItemRequest: {
+      /** @description Optional name of the person booking the item. If not provided, booking will be anonymous. */
+      bookerName?: string;
+      /** @description Optional message from the booker to the wishlist owner. */
+      message?: string;
+    };
+    ConflictErrorResponse: {
+      /** @description Error type */
+      error: string;
+      /** @description Detailed error message */
+      message: string;
+    };
+    ItemBooking: {
+      /**
+       * Format: uuid
+       * @description Unique identifier for this booking
+       */
+      bookingId: string;
+      /**
+       * Format: date-time
+       * @description When the item was booked
+       */
+      bookedAt: string;
+      /** @description Name of the person who booked the item (null for anonymous bookings) */
+      bookerName: string | null;
+      /** @description Optional message from the booker */
+      message?: string | null;
+    };
+    BookItemResponse: {
+      /**
+       * Format: uuid
+       * @description Unique identifier for this booking
+       */
+      bookingId: string;
+      /**
+       * Format: date-time
+       * @description When the item was booked
+       */
+      bookedAt: string;
+      /** @description Name of the person who booked the item (null for anonymous bookings) */
+      bookerName: string | null;
+      /** @description Optional message from the booker */
+      message?: string | null;
+      /**
+       * Format: uuid
+       * @description Secret token that allows the booker to cancel their booking. Store this securely!
+       */
+      cancellationToken: string;
     };
   };
   responses: never;

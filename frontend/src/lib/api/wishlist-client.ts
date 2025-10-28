@@ -8,12 +8,17 @@ type CreateWishlistRequest = components["schemas"]["CreateWishlistRequest"];
 type UpdateWishlistRequest = components["schemas"]["UpdateWishlistRequest"];
 type CreateWishlistItemRequest = components["schemas"]["CreateWishlistItemRequest"];
 type UpdateWishlistItemRequest = components["schemas"]["UpdateWishlistItemRequest"];
+type BookItemRequest = components["schemas"]["BookItemRequest"];
+type ItemBooking = components["schemas"]["ItemBooking"];
+type BookItemResponse = components["schemas"]["BookItemResponse"];
 
 // Resolve base URL from SvelteKit public env or Vite env, with localhost fallback
 const PUBLIC_WISHLIST_API_BASE_URL =
   env.PUBLIC_WISHLIST_API_BASE_URL ??
   (import.meta as any).env?.VITE_WISHLIST_API_BASE_URL ??
   "http://localhost:8081";
+
+export type { BookItemRequest, ItemBooking, BookItemResponse };
 
 export class WishlistApiClient {
   private baseUrl: string;
@@ -134,6 +139,34 @@ export class WishlistApiClient {
 
   async deleteWishlistItem(wishlistId: string, itemId: string, token: string): Promise<void> {
     await this.request(`/${wishlistId}/items/${itemId}`, { method: "DELETE" }, token, false);
+  }
+
+  async bookItem(wishlistId: string, itemId: string, data: BookItemRequest): Promise<BookItemResponse> {
+    return this.request(
+      `/${wishlistId}/items/${itemId}/book`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async unbookItemByOwner(wishlistId: string, itemId: string, bookingId: string, token: string): Promise<void> {
+    await this.request(
+      `/${wishlistId}/items/${itemId}/unbook?bookingId=${encodeURIComponent(bookingId)}`,
+      { method: "DELETE" },
+      token,
+      false
+    );
+  }
+
+  async unbookItemByToken(wishlistId: string, itemId: string, cancellationToken: string): Promise<void> {
+    await this.request(
+      `/${wishlistId}/items/${itemId}/unbook?cancellationToken=${encodeURIComponent(cancellationToken)}`,
+      { method: "DELETE" },
+      undefined,
+      false
+    );
   }
 }
 

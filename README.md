@@ -38,6 +38,18 @@ frontend/        # SvelteKit app
 
 ## Getting started
 
+### Quick Setup (Recommended)
+
+Use the automated setup script for a complete development environment:
+
+```bash
+./scripts/setup-dev.sh
+```
+
+This will set up Podman containers for PostgreSQL and MongoDB, create databases, and generate `.env` files.
+
+### Manual Setup
+
 1) Frontend
 - cd frontend
 - pnpm install

@@ -100,6 +100,17 @@ func (l *Logger) LogBadRequest(userID *openapi_types.UUID, action string, reason
 		l.serviceName, action, userStr, reason)
 }
 
+// LogConflict logs conflict errors (e.g., resource already exists)
+func (l *Logger) LogConflict(userID *openapi_types.UUID, action string, reason string) {
+	userStr := "anonymous"
+	if userID != nil {
+		userStr = userID.String()
+	}
+
+	log.Printf("[%s] CONFLICT - %s (user: %s): %s",
+		l.serviceName, action, userStr, reason)
+}
+
 // LogDatabaseOperation logs database operations with performance info
 func (l *Logger) LogDatabaseOperation(operation string, duration time.Duration, success bool, details string) {
 	status := "SUCCESS"

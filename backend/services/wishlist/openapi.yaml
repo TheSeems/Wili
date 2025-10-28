@@ -22,6 +22,8 @@ tags:
     description: Operations on wishlists
   - name: WishlistItems
     description: Operations on items within a wishlist
+  - name: Bookings
+    description: Operations for booking wishlist items
 
 paths:
   /wishlists:
@@ -221,6 +223,99 @@ paths:
         "404":
           description: Item not found
 
+  /wishlists/{wishlistId}/items/{itemId}/book:
+    post:
+      summary: Book a wishlist item (public endpoint)
+      description: |
+        Book a wishlist item. This endpoint is public and allows anonymous users
+        to book items by providing a custom name or booking anonymously.
+      tags: [Bookings]
+      parameters:
+        - name: wishlistId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookItemRequest'
+      responses:
+        "200":
+          description: Item booked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookItemResponse'
+        "400":
+          description: Invalid input or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        "404":
+          description: Wishlist or item not found
+        "409":
+          description: Item is already booked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictErrorResponse'
+
+  /wishlists/{wishlistId}/items/{itemId}/unbook:
+    delete:
+      summary: Unbook a wishlist item
+      description: |
+        Remove a booking from a wishlist item. 
+        - Wishlist owner can unbook any item by providing bookingId (requires auth)
+        - Booker can unbook their own booking by providing cancellationToken (no auth required)
+      tags: [Bookings]
+      parameters:
+        - name: wishlistId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: bookingId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: ID of the booking to unbook (for wishlist owner)
+        - name: cancellationToken
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Cancellation token received when booking (for booker)
+      responses:
+        "204":
+          description: Item unbooked successfully
+        "400":
+          description: Invalid request - must provide either bookingId or cancellationToken
+        "403":
+          description: Not authorized to unbook this item
+        "404":
+          description: Wishlist, item, or booking not found
+
 components:
   securitySchemes:
     bearerAuth:
@@ -298,9 +393,16 @@ components:
           maxLength: 50
           description: Discriminator for item type (e.g., "text", "marketplace")
         data:
-          $ref: '#/components/schemas/WishlistItemData'
-
-
+          $ref: "#/components/schemas/WishlistItemData"
+        booking:
+          $ref: "#/components/schemas/ItemBooking"
+          nullable: true
+          description: Current booking information for this item (null if not booked)
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
           format: date-time
 
     CreateWishlistItemRequest:
@@ -374,4 +476,74 @@ components:
         message:
           type: string
           description: Detailed error message for the field
+
+    # Booking schemas
+    BookItemRequest:
+      type: object
+      properties:
+        bookerName:
+          type: string
+          maxLength: 100
+          description: Optional name of the person booking the item. If not provided, booking will be anonymous.
+        message:
+          type: string
+          maxLength: 500
+          description: Optional message from the booker to the wishlist owner.
+
+    ConflictErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Detailed error message
+
+    ItemBooking:
+      type: object
+      required: [bookingId, bookedAt, bookerName]
+      properties:
+        bookingId:
+          type: string
+          format: uuid
+          description: Unique identifier for this booking
+        bookedAt:
+          type: string
+          format: date-time
+          description: When the item was booked
+        bookerName:
+          type: string
+          nullable: true
+          description: Name of the person who booked the item (null for anonymous bookings)
+        message:
+          type: string
+          nullable: true
+          description: Optional message from the booker
+
+    BookItemResponse:
+      type: object
+      required: [bookingId, bookedAt, bookerName, cancellationToken]
+      properties:
+        bookingId:
+          type: string
+          format: uuid
+          description: Unique identifier for this booking
+        bookedAt:
+          type: string
+          format: date-time
+          description: When the item was booked
+        bookerName:
+          type: string
+          nullable: true
+          description: Name of the person who booked the item (null for anonymous bookings)
+        message:
+          type: string
+          nullable: true
+          description: Optional message from the booker
+        cancellationToken:
+          type: string
+          format: uuid
+          description: Secret token that allows the booker to cancel their booking. Store this securely!
 

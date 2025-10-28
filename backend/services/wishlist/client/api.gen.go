@@ -22,28 +22,95 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// BookItemRequest defines model for BookItemRequest.
+type BookItemRequest struct {
+	// BookerName Optional name of the person booking the item. If not provided, booking will be anonymous.
+	BookerName *string `json:"bookerName,omitempty"`
+
+	// Message Optional message from the booker to the wishlist owner.
+	Message *string `json:"message,omitempty"`
+}
+
+// ConflictErrorResponse defines model for ConflictErrorResponse.
+type ConflictErrorResponse struct {
+	// Error Error type
+	Error string `json:"error"`
+
+	// Message Detailed error message
+	Message string `json:"message"`
+}
+
 // CreateWishlistItemRequest defines model for CreateWishlistItemRequest.
 type CreateWishlistItemRequest struct {
-	Data map[string]interface{} `json:"data"`
-	Type string                 `json:"type"`
+	// Data Item-specific data payload. All items must have a name.
+	// Description and other properties are optional to support different item types
+	// (e.g., marketplace items with SKU, price, etc.).
+	Data WishlistItemData `json:"data"`
+
+	// Type Item type discriminator
+	Type string `json:"type"`
 }
 
 // CreateWishlistRequest defines model for CreateWishlistRequest.
 type CreateWishlistRequest struct {
+	// Description Optional wishlist description
 	Description *string `json:"description"`
-	Title       string  `json:"title"`
+
+	// Title Wishlist title
+	Title string `json:"title"`
+}
+
+// ItemBooking defines model for ItemBooking.
+type ItemBooking struct {
+	// BookedAt When the item was booked
+	BookedAt time.Time `json:"bookedAt"`
+
+	// BookerName Name of the person who booked the item (null for anonymous bookings)
+	BookerName *string `json:"bookerName"`
+
+	// BookingId Unique identifier for this booking
+	BookingId openapi_types.UUID `json:"bookingId"`
+
+	// Message Optional message from the booker
+	Message *string `json:"message"`
 }
 
 // UpdateWishlistItemRequest defines model for UpdateWishlistItemRequest.
 type UpdateWishlistItemRequest struct {
-	Data *map[string]interface{} `json:"data,omitempty"`
-	Type *string                 `json:"type,omitempty"`
+	// Data Item-specific data payload. All items must have a name.
+	// Description and other properties are optional to support different item types
+	// (e.g., marketplace items with SKU, price, etc.).
+	Data *WishlistItemData `json:"data,omitempty"`
+
+	// Type Updated item type discriminator
+	Type *string `json:"type,omitempty"`
 }
 
 // UpdateWishlistRequest defines model for UpdateWishlistRequest.
 type UpdateWishlistRequest struct {
+	// Description Updated wishlist description
 	Description *string `json:"description"`
-	Title       *string `json:"title,omitempty"`
+
+	// Title Updated wishlist title
+	Title *string `json:"title,omitempty"`
+}
+
+// ValidationError defines model for ValidationError.
+type ValidationError struct {
+	// Field Name of the field that failed validation
+	Field string `json:"field"`
+
+	// Message Detailed error message for the field
+	Message string `json:"message"`
+}
+
+// ValidationErrorResponse defines model for ValidationErrorResponse.
+type ValidationErrorResponse struct {
+	// Details Detailed validation errors
+	Details []ValidationError `json:"details"`
+
+	// Error General error message
+	Error string `json:"error"`
 }
 
 // Wishlist defines model for Wishlist.
@@ -59,15 +126,39 @@ type Wishlist struct {
 
 // WishlistItem defines model for WishlistItem.
 type WishlistItem struct {
-	CreatedAt *time.Time `json:"createdAt,omitempty"`
+	Booking   *ItemBooking `json:"booking,omitempty"`
+	CreatedAt *time.Time   `json:"createdAt,omitempty"`
 
-	// Data Item-specific payload
-	Data map[string]interface{} `json:"data"`
-	Id   openapi_types.UUID     `json:"id"`
+	// Data Item-specific data payload. All items must have a name.
+	// Description and other properties are optional to support different item types
+	// (e.g., marketplace items with SKU, price, etc.).
+	Data WishlistItemData   `json:"data"`
+	Id   openapi_types.UUID `json:"id"`
 
 	// Type Discriminator for item type (e.g., "text", "marketplace")
 	Type      string     `json:"type"`
 	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+}
+
+// WishlistItemData Item-specific data payload. All items must have a name.
+// Description and other properties are optional to support different item types
+// (e.g., marketplace items with SKU, price, etc.).
+type WishlistItemData struct {
+	// Description Optional description of the wishlist item
+	Description *string `json:"description,omitempty"`
+
+	// Name Name of the wishlist item
+	Name string `json:"name"`
+
+	// Url Optional URL associated with the item
+	Url                  *string                `json:"url,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeleteWishlistsWishlistIdItemsItemIdUnbookParams defines parameters for DeleteWishlistsWishlistIdItemsItemIdUnbook.
+type DeleteWishlistsWishlistIdItemsItemIdUnbookParams struct {
+	// BookingId ID of the booking to unbook
+	BookingId openapi_types.UUID `form:"bookingId" json:"bookingId"`
 }
 
 // PostWishlistsJSONRequestBody defines body for PostWishlists for application/json ContentType.
@@ -81,6 +172,105 @@ type PostWishlistsWishlistIdItemsJSONRequestBody = CreateWishlistItemRequest
 
 // PutWishlistsWishlistIdItemsItemIdJSONRequestBody defines body for PutWishlistsWishlistIdItemsItemId for application/json ContentType.
 type PutWishlistsWishlistIdItemsItemIdJSONRequestBody = UpdateWishlistItemRequest
+
+// PostWishlistsWishlistIdItemsItemIdBookJSONRequestBody defines body for PostWishlistsWishlistIdItemsItemIdBook for application/json ContentType.
+type PostWishlistsWishlistIdItemsItemIdBookJSONRequestBody = BookItemRequest
+
+// Getter for additional properties for WishlistItemData. Returns the specified
+// element and whether it was found
+func (a WishlistItemData) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for WishlistItemData
+func (a *WishlistItemData) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for WishlistItemData to handle AdditionalProperties
+func (a *WishlistItemData) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["description"]; found {
+		err = json.Unmarshal(raw, &a.Description)
+		if err != nil {
+			return fmt.Errorf("error reading 'description': %w", err)
+		}
+		delete(object, "description")
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if raw, found := object["url"]; found {
+		err = json.Unmarshal(raw, &a.Url)
+		if err != nil {
+			return fmt.Errorf("error reading 'url': %w", err)
+		}
+		delete(object, "url")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for WishlistItemData to handle AdditionalProperties
+func (a WishlistItemData) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Description != nil {
+		object["description"], err = json.Marshal(a.Description)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'description': %w", err)
+		}
+	}
+
+	object["name"], err = json.Marshal(a.Name)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'name': %w", err)
+	}
+
+	if a.Url != nil {
+		object["url"], err = json.Marshal(a.Url)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'url': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -186,6 +376,14 @@ type ClientInterface interface {
 	PutWishlistsWishlistIdItemsItemIdWithBody(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PutWishlistsWishlistIdItemsItemId(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, body PutWishlistsWishlistIdItemsItemIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PostWishlistsWishlistIdItemsItemIdBookWithBody request with any body
+	PostWishlistsWishlistIdItemsItemIdBookWithBody(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PostWishlistsWishlistIdItemsItemIdBook(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, body PostWishlistsWishlistIdItemsItemIdBookJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteWishlistsWishlistIdItemsItemIdUnbook request
+	DeleteWishlistsWishlistIdItemsItemIdUnbook(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, params *DeleteWishlistsWishlistIdItemsItemIdUnbookParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) GetWishlists(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -322,6 +520,42 @@ func (c *Client) PutWishlistsWishlistIdItemsItemIdWithBody(ctx context.Context, 
 
 func (c *Client) PutWishlistsWishlistIdItemsItemId(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, body PutWishlistsWishlistIdItemsItemIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutWishlistsWishlistIdItemsItemIdRequest(c.Server, wishlistId, itemId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostWishlistsWishlistIdItemsItemIdBookWithBody(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostWishlistsWishlistIdItemsItemIdBookRequestWithBody(c.Server, wishlistId, itemId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostWishlistsWishlistIdItemsItemIdBook(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, body PostWishlistsWishlistIdItemsItemIdBookJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostWishlistsWishlistIdItemsItemIdBookRequest(c.Server, wishlistId, itemId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteWishlistsWishlistIdItemsItemIdUnbook(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, params *DeleteWishlistsWishlistIdItemsItemIdUnbookParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteWishlistsWishlistIdItemsItemIdUnbookRequest(c.Server, wishlistId, itemId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -656,6 +890,119 @@ func NewPutWishlistsWishlistIdItemsItemIdRequestWithBody(server string, wishlist
 	return req, nil
 }
 
+// NewPostWishlistsWishlistIdItemsItemIdBookRequest calls the generic PostWishlistsWishlistIdItemsItemIdBook builder with application/json body
+func NewPostWishlistsWishlistIdItemsItemIdBookRequest(server string, wishlistId openapi_types.UUID, itemId openapi_types.UUID, body PostWishlistsWishlistIdItemsItemIdBookJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPostWishlistsWishlistIdItemsItemIdBookRequestWithBody(server, wishlistId, itemId, "application/json", bodyReader)
+}
+
+// NewPostWishlistsWishlistIdItemsItemIdBookRequestWithBody generates requests for PostWishlistsWishlistIdItemsItemIdBook with any type of body
+func NewPostWishlistsWishlistIdItemsItemIdBookRequestWithBody(server string, wishlistId openapi_types.UUID, itemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "wishlistId", runtime.ParamLocationPath, wishlistId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "itemId", runtime.ParamLocationPath, itemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/wishlists/%s/items/%s/book", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteWishlistsWishlistIdItemsItemIdUnbookRequest generates requests for DeleteWishlistsWishlistIdItemsItemIdUnbook
+func NewDeleteWishlistsWishlistIdItemsItemIdUnbookRequest(server string, wishlistId openapi_types.UUID, itemId openapi_types.UUID, params *DeleteWishlistsWishlistIdItemsItemIdUnbookParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "wishlistId", runtime.ParamLocationPath, wishlistId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "itemId", runtime.ParamLocationPath, itemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/wishlists/%s/items/%s/unbook", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "bookingId", runtime.ParamLocationQuery, params.BookingId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -730,6 +1077,14 @@ type ClientWithResponsesInterface interface {
 	PutWishlistsWishlistIdItemsItemIdWithBodyWithResponse(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWishlistsWishlistIdItemsItemIdResponse, error)
 
 	PutWishlistsWishlistIdItemsItemIdWithResponse(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, body PutWishlistsWishlistIdItemsItemIdJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWishlistsWishlistIdItemsItemIdResponse, error)
+
+	// PostWishlistsWishlistIdItemsItemIdBookWithBodyWithResponse request with any body
+	PostWishlistsWishlistIdItemsItemIdBookWithBodyWithResponse(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostWishlistsWishlistIdItemsItemIdBookResponse, error)
+
+	PostWishlistsWishlistIdItemsItemIdBookWithResponse(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, body PostWishlistsWishlistIdItemsItemIdBookJSONRequestBody, reqEditors ...RequestEditorFn) (*PostWishlistsWishlistIdItemsItemIdBookResponse, error)
+
+	// DeleteWishlistsWishlistIdItemsItemIdUnbookWithResponse request
+	DeleteWishlistsWishlistIdItemsItemIdUnbookWithResponse(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, params *DeleteWishlistsWishlistIdItemsItemIdUnbookParams, reqEditors ...RequestEditorFn) (*DeleteWishlistsWishlistIdItemsItemIdUnbookResponse, error)
 }
 
 type GetWishlistsResponse struct {
@@ -758,6 +1113,7 @@ type PostWishlistsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *Wishlist
+	JSON400      *ValidationErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -823,6 +1179,7 @@ type PutWishlistsWishlistIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Wishlist
+	JSON400      *ValidationErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -845,6 +1202,7 @@ type PostWishlistsWishlistIdItemsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *WishlistItem
+	JSON400      *ValidationErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -888,6 +1246,7 @@ type PutWishlistsWishlistIdItemsItemIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *WishlistItem
+	JSON400      *ValidationErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -900,6 +1259,51 @@ func (r PutWishlistsWishlistIdItemsItemIdResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r PutWishlistsWishlistIdItemsItemIdResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PostWishlistsWishlistIdItemsItemIdBookResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ItemBooking
+	JSON400      *ValidationErrorResponse
+	JSON409      *ConflictErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PostWishlistsWishlistIdItemsItemIdBookResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PostWishlistsWishlistIdItemsItemIdBookResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteWishlistsWishlistIdItemsItemIdUnbookResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteWishlistsWishlistIdItemsItemIdUnbookResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteWishlistsWishlistIdItemsItemIdUnbookResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -1010,6 +1414,32 @@ func (c *ClientWithResponses) PutWishlistsWishlistIdItemsItemIdWithResponse(ctx 
 	return ParsePutWishlistsWishlistIdItemsItemIdResponse(rsp)
 }
 
+// PostWishlistsWishlistIdItemsItemIdBookWithBodyWithResponse request with arbitrary body returning *PostWishlistsWishlistIdItemsItemIdBookResponse
+func (c *ClientWithResponses) PostWishlistsWishlistIdItemsItemIdBookWithBodyWithResponse(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostWishlistsWishlistIdItemsItemIdBookResponse, error) {
+	rsp, err := c.PostWishlistsWishlistIdItemsItemIdBookWithBody(ctx, wishlistId, itemId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostWishlistsWishlistIdItemsItemIdBookResponse(rsp)
+}
+
+func (c *ClientWithResponses) PostWishlistsWishlistIdItemsItemIdBookWithResponse(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, body PostWishlistsWishlistIdItemsItemIdBookJSONRequestBody, reqEditors ...RequestEditorFn) (*PostWishlistsWishlistIdItemsItemIdBookResponse, error) {
+	rsp, err := c.PostWishlistsWishlistIdItemsItemIdBook(ctx, wishlistId, itemId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostWishlistsWishlistIdItemsItemIdBookResponse(rsp)
+}
+
+// DeleteWishlistsWishlistIdItemsItemIdUnbookWithResponse request returning *DeleteWishlistsWishlistIdItemsItemIdUnbookResponse
+func (c *ClientWithResponses) DeleteWishlistsWishlistIdItemsItemIdUnbookWithResponse(ctx context.Context, wishlistId openapi_types.UUID, itemId openapi_types.UUID, params *DeleteWishlistsWishlistIdItemsItemIdUnbookParams, reqEditors ...RequestEditorFn) (*DeleteWishlistsWishlistIdItemsItemIdUnbookResponse, error) {
+	rsp, err := c.DeleteWishlistsWishlistIdItemsItemIdUnbook(ctx, wishlistId, itemId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteWishlistsWishlistIdItemsItemIdUnbookResponse(rsp)
+}
+
 // ParseGetWishlistsResponse parses an HTTP response from a GetWishlistsWithResponse call
 func ParseGetWishlistsResponse(rsp *http.Response) (*GetWishlistsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -1056,6 +1486,13 @@ func ParsePostWishlistsResponse(rsp *http.Response) (*PostWishlistsResponse, err
 			return nil, err
 		}
 		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ValidationErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	}
 
@@ -1125,6 +1562,13 @@ func ParsePutWishlistsWishlistIdResponse(rsp *http.Response) (*PutWishlistsWishl
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ValidationErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	}
 
 	return response, nil
@@ -1150,6 +1594,13 @@ func ParsePostWishlistsWishlistIdItemsResponse(rsp *http.Response) (*PostWishlis
 			return nil, err
 		}
 		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ValidationErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	}
 
@@ -1193,6 +1644,69 @@ func ParsePutWishlistsWishlistIdItemsItemIdResponse(rsp *http.Response) (*PutWis
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ValidationErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePostWishlistsWishlistIdItemsItemIdBookResponse parses an HTTP response from a PostWishlistsWishlistIdItemsItemIdBookWithResponse call
+func ParsePostWishlistsWishlistIdItemsItemIdBookResponse(rsp *http.Response) (*PostWishlistsWishlistIdItemsItemIdBookResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PostWishlistsWishlistIdItemsItemIdBookResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ItemBooking
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ValidationErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ConflictErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteWishlistsWishlistIdItemsItemIdUnbookResponse parses an HTTP response from a DeleteWishlistsWishlistIdItemsItemIdUnbookWithResponse call
+func ParseDeleteWishlistsWishlistIdItemsItemIdUnbookResponse(rsp *http.Response) (*DeleteWishlistsWishlistIdItemsItemIdUnbookResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteWishlistsWishlistIdItemsItemIdUnbookResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil

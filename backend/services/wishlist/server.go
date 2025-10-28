@@ -25,7 +25,6 @@ func NewWishlistServer(repo *MongoRepo, userClient *UserClient) *WishlistServer 
 	}
 }
 
-// Helper function to extract user ID from JWT token via user service
 func (s *WishlistServer) extractUserID(r *http.Request) (openapi_types.UUID, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -208,12 +207,7 @@ func (s *WishlistServer) PostWishlistsWishlistIdItems(w http.ResponseWriter, r *
 		return
 	}
 
-	itemName := "unknown"
-	if nameVal, ok := req.Data["name"]; ok {
-		if nameStr, ok := nameVal.(string); ok {
-			itemName = nameStr
-		}
-	}
+	itemName := req.Data.Name
 	s.logger.LogSuccess(&userID, "add_item", fmt.Sprintf("added item '%s' (type: %s) to wishlist %s", itemName, req.Type, wishlistId.String()))
 	s.writeJSON(w, http.StatusCreated, item)
 }
@@ -346,4 +340,96 @@ func (s *WishlistServer) PutWishlistsWishlistId(w http.ResponseWriter, r *http.R
 
 	s.logger.LogSuccess(&userID, "update_wishlist", fmt.Sprintf("successfully updated wishlist %s", wishlistId.String()))
 	s.writeJSON(w, http.StatusOK, updated)
+}
+
+// Book a wishlist item (public endpoint)
+func (s *WishlistServer) PostWishlistsWishlistIdItemsItemIdBook(w http.ResponseWriter, r *http.Request, wishlistId, itemId openapi_types.UUID) {
+	s.logger.LogRequest(r, nil, "book_item")
+
+	var req wishlistgen.BookItemRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.logger.LogBadRequest(nil, "book_item", fmt.Sprintf("malformed JSON for item %s in wishlist %s: %v", itemId.String(), wishlistId.String(), err))
+		s.writeError(w, http.StatusBadRequest, "Invalid request body: malformed JSON")
+		return
+	}
+
+	booking, err := s.repo.BookItem(r.Context(), wishlistId, itemId, req)
+	if err != nil {
+		if strings.Contains(err.Error(), "already booked") {
+			s.logger.LogConflict(nil, "book_item", fmt.Sprintf("item %s in wishlist %s is already booked", itemId.String(), wishlistId.String()))
+			s.writeError(w, http.StatusConflict, "Item is already booked")
+			return
+		}
+		if strings.Contains(err.Error(), "not found") {
+			s.logger.LogNotFound(nil, "item", fmt.Sprintf("%s in wishlist %s", itemId.String(), wishlistId.String()))
+			s.writeError(w, http.StatusNotFound, "Wishlist or item not found")
+			return
+		}
+		s.logger.LogError(nil, "book_item", err, fmt.Sprintf("failed to book item %s in wishlist %s", itemId.String(), wishlistId.String()))
+		s.writeError(w, http.StatusInternalServerError, "Failed to book item")
+		return
+	}
+
+	bookerName := "anonymous"
+	if booking.BookerName != nil {
+		bookerName = *booking.BookerName
+	}
+	s.logger.LogSuccess(nil, "book_item", fmt.Sprintf("booked item %s in wishlist %s by %s", itemId.String(), wishlistId.String(), bookerName))
+	s.writeJSON(w, http.StatusOK, booking)
+}
+
+func (s *WishlistServer) DeleteWishlistsWishlistIdItemsItemIdUnbook(w http.ResponseWriter, r *http.Request, wishlistId, itemId openapi_types.UUID, params wishlistgen.DeleteWishlistsWishlistIdItemsItemIdUnbookParams) {
+	s.logger.LogRequest(r, nil, "unbook_item")
+
+	if params.BookingId == nil && params.CancellationToken == nil {
+		s.logger.LogBadRequest(nil, "unbook_item", "must provide either bookingId or cancellationToken")
+		s.writeError(w, http.StatusBadRequest, "Must provide either bookingId or cancellationToken")
+		return
+	}
+
+	var err error
+
+	if params.CancellationToken != nil {
+		err = s.repo.UnbookItemByToken(r.Context(), wishlistId, itemId, params.CancellationToken.String())
+	} else {
+		userId, userErr := s.extractUserID(r)
+		if userErr != nil {
+			s.writeError(w, http.StatusUnauthorized, "Authentication required")
+			return
+		}
+
+		wishlist, wishlistErr := s.repo.GetWishlistByID(r.Context(), wishlistId)
+		if wishlistErr != nil {
+			if strings.Contains(wishlistErr.Error(), "not found") {
+				s.logger.LogNotFound(&userId, "wishlist", wishlistId.String())
+				s.writeError(w, http.StatusNotFound, "Wishlist not found")
+				return
+			}
+			s.logger.LogError(&userId, "get_wishlist", wishlistErr, wishlistId.String())
+			s.writeError(w, http.StatusInternalServerError, "Failed to verify wishlist ownership")
+			return
+		}
+
+		if wishlist.UserId.String() != userId.String() {
+			s.logger.LogUnauthorized(r, "unbook_item", fmt.Sprintf("user %s tried to unbook item in wishlist %s", userId.String(), wishlistId.String()))
+			s.writeError(w, http.StatusForbidden, "You don't own this wishlist")
+			return
+		}
+
+		err = s.repo.UnbookItem(r.Context(), wishlistId, itemId, *params.BookingId)
+	}
+
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "invalid token") {
+			s.logger.LogNotFound(nil, "booking", fmt.Sprintf("for item %s in wishlist %s", itemId.String(), wishlistId.String()))
+			s.writeError(w, http.StatusNotFound, "Wishlist, item, or booking not found")
+			return
+		}
+		s.logger.LogError(nil, "unbook_item", err, fmt.Sprintf("failed to unbook item %s in wishlist %s", itemId.String(), wishlistId.String()))
+		s.writeError(w, http.StatusInternalServerError, "Failed to unbook item")
+		return
+	}
+
+	s.logger.LogSuccess(nil, "unbook_item", fmt.Sprintf("unbooked item %s in wishlist %s", itemId.String(), wishlistId.String()))
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -45,8 +45,6 @@
     // Redirect to Yandex OAuth
     window.location.href = oauthUrl.toString();
   }
-
-  // No initialization needed for manual OAuth
 </script>
 
 <section class="flex h-[80vh] flex-col items-center justify-center px-4">

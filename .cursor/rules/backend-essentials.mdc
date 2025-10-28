@@ -1,0 +1,6 @@
+---
+globs: backend/*
+alwaysApply: false
+---
+Spec-first development, clients and stubs for endpoints are codegenerated, don't create custom endpoints unless really need to and don't modify codegen, for generation use scripts/generate.sh
+For each new endpoint always add tests and make sure tests work after your changes

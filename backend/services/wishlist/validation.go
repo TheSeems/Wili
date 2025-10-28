@@ -115,52 +115,28 @@ func ValidateUpdateWishlistItemRequest(req wishlistgen.UpdateWishlistItemRequest
 }
 
 // validateItemData validates the item data payload structure
-func validateItemData(data map[string]interface{}) ValidationErrors {
+func validateItemData(data wishlistgen.WishlistItemData) ValidationErrors {
 	var errors ValidationErrors
 
-	nameRaw, hasName := data["name"]
-	if !hasName {
-		errors = append(errors, ValidationError{
-			Field:   "data.name",
-			Message: "name is required in item data",
-		})
-	} else {
-		nameStr, isString := nameRaw.(string)
-		if !isString {
-			errors = append(errors, ValidationError{
-				Field:   "data.name",
-				Message: "name must be a string",
-			})
-		} else {
-			if err := validateStringField("data.name", nameStr, MinItemNameLength, MaxItemNameLength, true); err != nil {
-				errors = append(errors, *err)
-			}
+	// Validate name (required)
+	if err := validateStringField("data.name", data.Name, MinItemNameLength, MaxItemNameLength, true); err != nil {
+		errors = append(errors, *err)
+	}
+
+	// Validate description (optional)
+	if data.Description != nil {
+		if err := validateStringField("data.description", *data.Description, 0, MaxItemDescriptionLength, false); err != nil {
+			errors = append(errors, *err)
 		}
 	}
 
-	descRaw, hasDesc := data["description"]
-	if hasDesc {
-		descStr, isString := descRaw.(string)
-		if !isString {
+	// Validate URL (optional)
+	if data.Url != nil {
+		if !isValidURL(*data.Url) {
 			errors = append(errors, ValidationError{
-				Field:   "data.description",
-				Message: "description must be a string",
+				Field:   "data.url",
+				Message: "url must be a valid HTTP/HTTPS URL",
 			})
-		} else {
-			if err := validateStringField("data.description", descStr, 0, MaxItemDescriptionLength, false); err != nil {
-				errors = append(errors, *err)
-			}
-		}
-	}
-
-	if urlRaw, hasURL := data["url"]; hasURL {
-		if urlStr, isString := urlRaw.(string); isString && urlStr != "" {
-			if !isValidURL(urlStr) {
-				errors = append(errors, ValidationError{
-					Field:   "data.url",
-					Message: "url must be a valid HTTP/HTTPS URL",
-				})
-			}
 		}
 	}
 
