@@ -711,7 +711,7 @@
                           <EditIcon class="mr-2 h-4 w-4" />
                           <T key="common.edit" fallback="Edit" />
                         </DropdownMenu.Item>
-                        {#if item.booking}
+                        {#if item.booking && getRevealLevel(item.id) !== "none"}
                           <DropdownMenu.Item
                             onclick={() => unbookItemByOwner(item)}
                             class="text-orange-600 focus:text-orange-600"
