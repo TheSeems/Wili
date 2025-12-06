@@ -11,6 +11,7 @@ COPY devutil/ ./devutil/
 COPY services/user/ ./services/user/
 COPY services/wishlist/ ./services/wishlist/
 COPY services/telegram-bot/ ./services/telegram-bot/
+COPY tools/ ./tools/
 
 # Set working directory to telegram bot
 WORKDIR /app/services/telegram-bot
