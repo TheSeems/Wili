@@ -40,6 +40,10 @@ sed -i "s/REGISTRY_ID_PLACEHOLDER/$YC_REGISTRY_ID/g" $TEMP_DIR/*.yaml
 # Image tags
 sed -i "s/IMAGE_TAG_PLACEHOLDER/$IMAGE_TAG/g" $TEMP_DIR/*.yaml
 
+# Telegram bot secrets and config
+sed -i "s/TELEGRAM_BOT_TOKEN_PLACEHOLDER/$TELEGRAM_BOT_TOKEN/g" $TEMP_DIR/*.yaml
+sed -i "s/WEBHOOK_SECRET_TOKEN_PLACEHOLDER/$WEBHOOK_SECRET_TOKEN/g" $TEMP_DIR/*.yaml
+
 echo -e "${GREEN}✅ Kubernetes manifests templated successfully!${NC}"
 echo -e "${YELLOW}📁 Templated files are in: $TEMP_DIR/${NC}"
 
@@ -64,6 +68,7 @@ kubectl wait --for=condition=available --timeout=300s deployment/mongodb -n wili
 kubectl apply -f $TEMP_DIR/user-service.yaml
 kubectl apply -f $TEMP_DIR/wishlist-service.yaml
 kubectl apply -f $TEMP_DIR/frontend.yaml
+kubectl apply -f $TEMP_DIR/telegram-bot.yaml
 
 # Apply ingress
 kubectl apply -f $TEMP_DIR/ingress.yaml
@@ -72,6 +77,7 @@ kubectl apply -f $TEMP_DIR/ingress.yaml
 kubectl wait --for=condition=available --timeout=300s deployment/user-service -n wili
 kubectl wait --for=condition=available --timeout=300s deployment/wishlist-service -n wili
 kubectl wait --for=condition=available --timeout=300s deployment/frontend -n wili
+kubectl wait --for=condition=available --timeout=300s deployment/telegram-bot -n wili
 
 echo -e "${GREEN}✅ All manifests applied successfully!${NC}"
 

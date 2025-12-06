@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { env } from "$env/dynamic/public";
   import { page } from "$app/state";
   import { authStore } from "$lib/stores/auth";
   import { goto } from "$app/navigation";
@@ -24,6 +25,7 @@
     XIcon,
     MoreVerticalIcon,
     ShareIcon,
+    SendIcon,
     BookOpenIcon,
     UserIcon,
     EyeIcon,
@@ -265,6 +267,9 @@
     }
   }
 
+  const telegramBotUsername = env.PUBLIC_TELEGRAM_BOT_USERNAME;
+  const telegramWebAppUrl = env.PUBLIC_TELEGRAM_WEBAPP_URL;
+
   async function shareWishlist() {
     if (!wishlist) return;
 
@@ -278,6 +283,20 @@
       console.error("Failed to copy to clipboard:", err);
       showInfoAlert($_("wishlists.shareLink"), shareUrl, "top-right");
     }
+  }
+
+  function shareWishlistToTelegram() {
+    if (!wishlist) return;
+    const startParam = `list_${wishlist.id}`;
+
+    if (telegramBotUsername) {
+      const link = `https://t.me/${telegramBotUsername}?start=${startParam}`;
+      window.open(link, "_blank", "noopener");
+      return;
+    }
+
+    // Bot not configured: log and noop
+    console.warn("Telegram bot username is not configured. Set PUBLIC_TELEGRAM_BOT_USERNAME.");
   }
 
   // Booking functions
@@ -530,6 +549,12 @@
               </Button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Content align="end">
+              {#if telegramBotUsername}
+                <DropdownMenu.Item onclick={shareWishlistToTelegram}>
+                  <SendIcon class="mr-2 h-4 w-4" />
+                  <T key="wishlists.shareToTelegram" fallback="Share to Telegram" />
+                </DropdownMenu.Item>
+              {/if}
               <DropdownMenu.Item onclick={shareWishlist}>
                 <ShareIcon class="mr-2 h-4 w-4" />
                 <T key="wishlists.shareLink" fallback="Share Link" />

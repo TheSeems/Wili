@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	log.Printf("Starting Wili User Service...")
+	log.Printf("Starting Wili User Service (build tag dev=%v)...", isDevBuild())
 
 	if err := godotenv.Load(); err != nil {
 		log.Printf("Warning: .env file not found: %v", err)
@@ -46,7 +46,7 @@ func main() {
 
 	port := getEnv("PORT", "8080")
 	addr := ":" + port
-	log.Printf("User service listening on %s", addr)
+	log.Printf("User service listening on %s (cors=%s)", addr, corsProfile())
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("failed to start server: %v", err)
 	}
@@ -57,4 +57,16 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func isDevBuild() bool {
+	// build tags are not directly detectable; rely on presence of dev CORS origins
+	return len(devutil.AllowedOrigins()) > 0 && devutil.AllowedOrigins()[0] == "http://localhost:5173"
+}
+
+func corsProfile() string {
+	if isDevBuild() {
+		return "dev"
+	}
+	return "prod"
 }

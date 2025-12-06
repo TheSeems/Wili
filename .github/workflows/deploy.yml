@@ -91,6 +91,14 @@ jobs:
         docker push $YC_REGISTRY/$YC_REGISTRY_ID/wishlist-service:${{ github.sha }}
         docker push $YC_REGISTRY/$YC_REGISTRY_ID/wishlist-service:latest
 
+    - name: Build and Push Telegram Bot
+      run: |
+        cd backend/services/telegram-bot
+        docker build -t $YC_REGISTRY/$YC_REGISTRY_ID/telegram-bot:${{ github.sha }} .
+        docker tag $YC_REGISTRY/$YC_REGISTRY_ID/telegram-bot:${{ github.sha }} $YC_REGISTRY/$YC_REGISTRY_ID/telegram-bot:latest
+        docker push $YC_REGISTRY/$YC_REGISTRY_ID/telegram-bot:${{ github.sha }}
+        docker push $YC_REGISTRY/$YC_REGISTRY_ID/telegram-bot:latest
+
     - name: Build and Push Frontend
       run: |
         cd frontend
@@ -147,6 +155,8 @@ jobs:
         JWT_SECRET: ${{ secrets.JWT_SECRET }}
         YANDEX_CLIENT_ID: ${{ secrets.YANDEX_CLIENT_ID }}
         YANDEX_CLIENT_SECRET: ${{ secrets.YANDEX_CLIENT_SECRET }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        WEBHOOK_SECRET_TOKEN: ${{ secrets.WEBHOOK_SECRET_TOKEN }}
         YC_REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
         IMAGE_TAG: ${{ github.sha }}
       run: |

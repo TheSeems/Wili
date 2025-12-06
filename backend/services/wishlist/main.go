@@ -71,7 +71,7 @@ func main() {
 	devutil.MountSwagger(r, "Wili Wishlist Service API")
 
 	logger.LogStartup(addr, mongoURI+"/"+dbName)
-	log.Printf("User Service URL: %s", userServiceURL)
+	log.Printf("User Service URL: %s (cors=%s)", userServiceURL, corsProfile())
 	log.Fatal(http.ListenAndServe(addr, r))
 }
 
@@ -80,4 +80,11 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func corsProfile() string {
+	if len(devutil.AllowedOrigins()) > 0 && devutil.AllowedOrigins()[0] == "http://localhost:5173" {
+		return "dev"
+	}
+	return "prod"
 }

@@ -76,7 +76,7 @@
 
   <ModeWatcher />
   {@render children?.()}
-  {#if page.url.pathname !== "/auth/callback"}
+  {#if page.url.pathname !== "/auth/callback" && !page.url.pathname.startsWith("/tgapp")}
     <footer class="mt-10 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
       <div class="flex items-center justify-center gap-4 opacity-70">
         <a

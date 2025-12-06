@@ -4,5 +4,6 @@ use (
 	./devutil
 	./services/user
 	./services/wishlist
+	./services/telegram-bot
 	./tools
 )

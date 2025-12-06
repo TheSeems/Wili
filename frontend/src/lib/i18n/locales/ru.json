@@ -77,6 +77,7 @@
     "addFirstItem": "Добавьте свой первый элемент в этот список желаний!",
     "failedToAdd": "Не удалось добавить элемент",
     "shareLink": "Поделиться ссылкой",
+    "shareToTelegram": "Поделиться в Telegram",
     "deleteWishlist": "Удалить вишлист",
     "shareLinkCopied": "Ссылка на вишлист скопирована в буфер обмена!",
     "shareLinkCopiedDescription": "Ссылка на вишлист скопирована в буфер обмена!",
@@ -143,6 +144,23 @@
     "english": "English",
     "russian": "Русский",
     "switchLanguage": "Переключить язык"
+  },
+  "tgapp": {
+    "pageTitle": "Открыть вишлист",
+    "loadingWishlist": "Загружаем вишлист…",
+    "loadError": "Не удалось загрузить вишлист. Попробуйте позже.",
+    "bookFailed": "Не удалось забронировать",
+    "unbookFailed": "Не удалось снять бронь",
+    "badLink": "Некорректная ссылка. Попробуйте переслать приглашение заново.",
+    "linkCopied": "Ссылка скопирована",
+    "copyManual": "Скопируйте ссылку вручную",
+    "openInBrowser": "Открыть в браузере",
+    "alreadyBooked": "Уже забронировано",
+    "bookAnonymously": "Бронировать анонимно",
+    "nameLabel": "От имени",
+    "messagePlaceholder": "Подпись к брони (необязательно)",
+    "openLinkConfirm": "Открыть внешнюю ссылку?",
+    "willBeAnonymous": "Бронирование будет анонимным"
   },
   "footer": {
     "github": "GitHub",

@@ -76,6 +76,7 @@
     "addFirstItem": "Add your first item to this wishlist!",
     "failedToAdd": "Failed to add item",
     "shareLink": "Share Link",
+    "shareToTelegram": "Share to Telegram",
     "deleteWishlist": "Delete Wishlist",
     "shareLinkCopied": "Share link copied to clipboard!",
     "shareLinkCopiedDescription": "Share link copied to clipboard!",
@@ -143,6 +144,23 @@
     "english": "English",
     "russian": "Русский",
     "switchLanguage": "Switch Language"
+  },
+  "tgapp": {
+    "pageTitle": "Open wishlist",
+    "loadingWishlist": "Loading wishlist…",
+    "loadError": "Failed to load wishlist. Please try again later.",
+    "bookFailed": "Failed to book",
+    "unbookFailed": "Failed to unbook",
+    "badLink": "Invalid link. Please forward the invite again.",
+    "linkCopied": "Link copied",
+    "copyManual": "Copy the link manually",
+    "openInBrowser": "Open in browser",
+    "alreadyBooked": "Already booked",
+    "bookAnonymously": "Book anonymously",
+    "nameLabel": "From",
+    "messagePlaceholder": "Booking note (optional)",
+    "openLinkConfirm": "Open external link?",
+    "willBeAnonymous": "Booking will be anonymous"
   },
   "footer": {
     "github": "GitHub",

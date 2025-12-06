@@ -1,0 +1,14 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go run -tags=dev ."
+bin = "tmp/main"
+include_ext = ["go"]
+exclude_dir = ["tmp", "vendor"]
+delay = 1000
+kill_delay = 500
+
+[log]
+level = "info"
+
