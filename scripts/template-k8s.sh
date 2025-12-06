@@ -96,6 +96,24 @@ kubectl wait --for=condition=available --timeout=300s deployment/wishlist-servic
 kubectl wait --for=condition=available --timeout=300s deployment/frontend -n wili
 kubectl wait --for=condition=available --timeout=300s deployment/telegram-bot -n wili
 
+# Set Telegram webhook after bot is ready
+echo -e "${YELLOW}🔗 Setting Telegram webhook...${NC}"
+WEBHOOK_URL="https://tg.wili.me/webhook"
+
+# Set webhook with secret token
+# Note: TELEGRAM_BOT_TOKEN and WEBHOOK_SECRET_TOKEN are already in plain text from GitHub secrets
+WEBHOOK_RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d "{\"url\":\"${WEBHOOK_URL}\",\"secret_token\":\"${WEBHOOK_SECRET_TOKEN}\"}")
+
+if echo "$WEBHOOK_RESPONSE" | grep -q '"ok":true'; then
+  echo -e "${GREEN}✅ Telegram webhook set successfully${NC}"
+else
+  echo -e "${YELLOW}⚠️  Failed to set Telegram webhook: ${WEBHOOK_RESPONSE}${NC}"
+  echo -e "${YELLOW}⚠️  You may need to set it manually:${NC}"
+  echo -e "${YELLOW}   curl -X POST \"https://api.telegram.org/bot\${TELEGRAM_BOT_TOKEN}/setWebhook\" -d \"url=${WEBHOOK_URL}&secret_token=\${WEBHOOK_SECRET_TOKEN}\"${NC}"
+fi
+
 echo -e "${GREEN}✅ All manifests applied successfully!${NC}"
 
 # Clean up temp directory
