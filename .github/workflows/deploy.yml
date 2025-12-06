@@ -93,8 +93,8 @@ jobs:
 
     - name: Build and Push Telegram Bot
       run: |
-        cd backend/services/telegram-bot
-        docker build -t $YC_REGISTRY/$YC_REGISTRY_ID/telegram-bot:${{ github.sha }} .
+        cd backend
+        docker build -f services/telegram-bot/Dockerfile -t $YC_REGISTRY/$YC_REGISTRY_ID/telegram-bot:${{ github.sha }} .
         docker tag $YC_REGISTRY/$YC_REGISTRY_ID/telegram-bot:${{ github.sha }} $YC_REGISTRY/$YC_REGISTRY_ID/telegram-bot:latest
         docker push $YC_REGISTRY/$YC_REGISTRY_ID/telegram-bot:${{ github.sha }}
         docker push $YC_REGISTRY/$YC_REGISTRY_ID/telegram-bot:latest

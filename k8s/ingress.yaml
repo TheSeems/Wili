@@ -66,6 +66,13 @@ spec:
             name: telegram-bot
             port:
               number: 80
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 80
 
 ---
 # ClusterIssuer for Let's Encrypt SSL certificates

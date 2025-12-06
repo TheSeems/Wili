@@ -92,7 +92,7 @@ func loadConfig() config {
 		apiBaseURL:   strings.TrimRight(mustEnv("WISHLIST_API_BASE_URL"), "/"),
 		webAppURL:    strings.TrimRight(mustEnv("TELEGRAM_WEBAPP_URL"), "/"),
 		webFallback:  strings.TrimRight(mustEnv("WISHES_WEB_URL"), "/"),
-		bindAddr:     envOrDefault("BIND_ADDR", ":8090"),
+		bindAddr:     envOrDefault("BIND_ADDR", ":8080"),
 		webhookPath:  envOrDefault("WEBHOOK_PATH", "webhook"),
 		webhookToken: envOrDefault("WEBHOOK_SECRET_TOKEN", ""),
 	}
