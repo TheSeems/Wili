@@ -9,3 +9,6 @@ Thumbs.db
 .idea/
 .vscode/
 .42c/
+
+# Build artifacts
+backend/services/telegram-bot/tmp/

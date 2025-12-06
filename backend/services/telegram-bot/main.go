@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -183,7 +184,8 @@ func parseListID(param string) string {
 		return ""
 	}
 	id := strings.TrimPrefix(param, "list_")
-	if len(id) < 10 {
+	uuidRe := regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+	if !uuidRe.MatchString(id) {
 		return ""
 	}
 	return id
