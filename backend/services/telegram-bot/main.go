@@ -65,6 +65,7 @@ type inlineKeyboardMarkup struct {
 type sendMessageRequest struct {
 	ChatID      int64                 `json:"chat_id"`
 	Text        string                `json:"text"`
+	ParseMode   string                `json:"parse_mode,omitempty"`
 	ReplyMarkup *inlineKeyboardMarkup `json:"reply_markup,omitempty"`
 }
 
@@ -226,12 +227,13 @@ func (b *bot) sendWishlistPreview(ctx context.Context, chatID int64, listID stri
 	webAppURL := fmt.Sprintf("%s?start=list_%s", b.cfg.webAppURL, listID)
 	fallbackURL := fmt.Sprintf("%s/wishlists/%s", b.cfg.webFallback, listID)
 
-	description := "Это вишлист Wili. Смотрите позиции и бронируйте подарки. Чтобы увидеть актуальные брони и отметить предмет, откройте мини‑приложение."
-	text := fmt.Sprintf("«%s»\n%s\n\n%s\n\nОткрыть в браузере: %s", wl.Title, status, description, fallbackURL)
+	description := "Посмотрите список подарков и забронируйте то, что хотите подарить. Чтобы увидеть, что уже забронировано, откройте вишлист."
+	text := fmt.Sprintf("*«%s»*\n%s\n\n%s\n\nМожно посмотреть по кнопке ниже или в [web](%s)", wl.Title, status, description, fallbackURL)
 
 	msg := sendMessageRequest{
-		ChatID: chatID,
-		Text:   text,
+		ChatID:    chatID,
+		Text:      text,
+		ParseMode: "Markdown",
 		ReplyMarkup: &inlineKeyboardMarkup{
 			InlineKeyboard: [][]inlineKeyboardButton{
 				{
