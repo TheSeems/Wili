@@ -23,26 +23,43 @@ cp k8s/*.yaml $TEMP_DIR/
 # Replace placeholders with GitHub secrets
 echo -e "${YELLOW}📝 Replacing placeholders in Kubernetes manifests...${NC}"
 
-# Database passwords
-sed -i "s/DB_PASSWORD_PLACEHOLDER/$DB_PASSWORD/g" $TEMP_DIR/*.yaml
-sed -i "s/MONGO_PASSWORD_PLACEHOLDER/$MONGO_PASSWORD/g" $TEMP_DIR/*.yaml
+# Helper function to base64 encode (works on both Linux and macOS)
+base64_encode() {
+    if command -v base64 >/dev/null 2>&1; then
+        echo -n "$1" | base64 | tr -d '\n'
+    else
+        echo "Error: base64 command not found" >&2
+        exit 1
+    fi
+}
 
-# JWT secret
-sed -i "s/JWT_SECRET_PLACEHOLDER/$JWT_SECRET/g" $TEMP_DIR/*.yaml
+# Database passwords (base64 encode for Kubernetes secrets)
+DB_PASSWORD_B64=$(base64_encode "$DB_PASSWORD")
+MONGO_PASSWORD_B64=$(base64_encode "$MONGO_PASSWORD")
+sed -i "s|DB_PASSWORD_PLACEHOLDER|$DB_PASSWORD_B64|g" $TEMP_DIR/*.yaml
+sed -i "s|MONGO_PASSWORD_PLACEHOLDER|$MONGO_PASSWORD_B64|g" $TEMP_DIR/*.yaml
 
-# Yandex OAuth credentials
-sed -i "s/YANDEX_CLIENT_ID_PLACEHOLDER/$YANDEX_CLIENT_ID/g" $TEMP_DIR/*.yaml
-sed -i "s/YANDEX_CLIENT_SECRET_PLACEHOLDER/$YANDEX_CLIENT_SECRET/g" $TEMP_DIR/*.yaml
+# JWT secret (base64 encode for Kubernetes secrets)
+JWT_SECRET_B64=$(base64_encode "$JWT_SECRET")
+sed -i "s|JWT_SECRET_PLACEHOLDER|$JWT_SECRET_B64|g" $TEMP_DIR/*.yaml
 
-# Registry ID
-sed -i "s/REGISTRY_ID_PLACEHOLDER/$YC_REGISTRY_ID/g" $TEMP_DIR/*.yaml
+# Yandex OAuth credentials (base64 encode for Kubernetes secrets)
+YANDEX_CLIENT_ID_B64=$(base64_encode "$YANDEX_CLIENT_ID")
+YANDEX_CLIENT_SECRET_B64=$(base64_encode "$YANDEX_CLIENT_SECRET")
+sed -i "s|YANDEX_CLIENT_ID_PLACEHOLDER|$YANDEX_CLIENT_ID_B64|g" $TEMP_DIR/*.yaml
+sed -i "s|YANDEX_CLIENT_SECRET_PLACEHOLDER|$YANDEX_CLIENT_SECRET_B64|g" $TEMP_DIR/*.yaml
 
-# Image tags
-sed -i "s/IMAGE_TAG_PLACEHOLDER/$IMAGE_TAG/g" $TEMP_DIR/*.yaml
+# Registry ID (not a secret, plain text)
+sed -i "s|REGISTRY_ID_PLACEHOLDER|$YC_REGISTRY_ID|g" $TEMP_DIR/*.yaml
 
-# Telegram bot secrets and config
-sed -i "s/TELEGRAM_BOT_TOKEN_PLACEHOLDER/$TELEGRAM_BOT_TOKEN/g" $TEMP_DIR/*.yaml
-sed -i "s/WEBHOOK_SECRET_TOKEN_PLACEHOLDER/$WEBHOOK_SECRET_TOKEN/g" $TEMP_DIR/*.yaml
+# Image tags (not a secret, plain text)
+sed -i "s|IMAGE_TAG_PLACEHOLDER|$IMAGE_TAG|g" $TEMP_DIR/*.yaml
+
+# Telegram bot secrets (base64 encode for Kubernetes secrets)
+TELEGRAM_BOT_TOKEN_B64=$(base64_encode "$TELEGRAM_BOT_TOKEN")
+WEBHOOK_SECRET_TOKEN_B64=$(base64_encode "$WEBHOOK_SECRET_TOKEN")
+sed -i "s|TELEGRAM_BOT_TOKEN_PLACEHOLDER|$TELEGRAM_BOT_TOKEN_B64|g" $TEMP_DIR/*.yaml
+sed -i "s|WEBHOOK_SECRET_TOKEN_PLACEHOLDER|$WEBHOOK_SECRET_TOKEN_B64|g" $TEMP_DIR/*.yaml
 
 echo -e "${GREEN}✅ Kubernetes manifests templated successfully!${NC}"
 echo -e "${YELLOW}📁 Templated files are in: $TEMP_DIR/${NC}"
