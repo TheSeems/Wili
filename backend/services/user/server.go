@@ -72,14 +72,23 @@ func parseBearer(r *http.Request) (uuid.UUID, bool) {
 func (s *server) PostAuthYandex(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[AUTH] Yandex auth request from %s", r.RemoteAddr)
 
-	var req usergen.YandexAuthRequest
+	type yandexAuthRequest struct {
+		Code        string `json:"code"`
+		RedirectURI string `json:"redirectUri"`
+	}
+
+	var req yandexAuthRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("[AUTH] Failed to decode request body: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if req.Code == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-	accessToken, err := s.exchangeYandexCode(req.Code)
+	accessToken, err := s.exchangeYandexCode(req.Code, req.RedirectURI)
 	if err != nil {
 		log.Printf("[AUTH] Failed to exchange Yandex code: %v", err)
 		w.WriteHeader(http.StatusUnauthorized)
@@ -303,9 +312,13 @@ func (s *server) GetUsersUserId(w http.ResponseWriter, r *http.Request, userId u
 }
 
 // exchangeYandexCode exchanges authorization code for access token
-func (s *server) exchangeYandexCode(code string) (string, error) {
+func (s *server) exchangeYandexCode(code string, redirectURIFromClient string) (string, error) {
 	clientID := os.Getenv("YANDEX_CLIENT_ID")
 	clientSecret := os.Getenv("YANDEX_CLIENT_SECRET")
+	redirectURI := redirectURIFromClient
+	if redirectURI == "" {
+		redirectURI = os.Getenv("YANDEX_REDIRECT_URI")
+	}
 
 	if clientID == "" || clientSecret == "" {
 		return "", fmt.Errorf("missing Yandex OAuth credentials")
@@ -316,6 +329,9 @@ func (s *server) exchangeYandexCode(code string) (string, error) {
 	data.Set("code", code)
 	data.Set("client_id", clientID)
 	data.Set("client_secret", clientSecret)
+	if redirectURI != "" {
+		data.Set("redirect_uri", redirectURI)
+	}
 
 	resp, err := http.PostForm("https://oauth.yandex.ru/token", data)
 	if err != nil {

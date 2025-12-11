@@ -63,21 +63,22 @@ export function redirectToYandex() {
 }
 
 export async function exchangeCode(code: string) {
-  const body = { code };
+  const redirectUri = browser ? `${window.location.origin}/auth/callback` : "";
+  const body = { code, redirectUri };
   const res = await fetch(`${AUTH_API_BASE_URL}/auth/yandex`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error("Auth failed", { cause: res });
+  if (!res.ok) throw new Error("Auth failed");
   const resp = (await res.json()) as AuthResponse;
 
   const token = resp.accessToken;
-	if (browser) {
-		localStorage.setItem(TOKEN_KEY, token);
-		localStorage.setItem(USER_KEY, JSON.stringify(resp.user));
-		localStorage.setItem(JUST_LOGGED_IN_KEY, "true");
-		authStore.set({
+  if (browser) {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(resp.user));
+    localStorage.setItem(JUST_LOGGED_IN_KEY, "true");
+    authStore.set({
       token,
       user: resp.user,
       isLoading: false,
@@ -87,7 +88,7 @@ export async function exchangeCode(code: string) {
 }
 
 export function logout() {
-	if (browser) {
+  if (browser) {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(JUST_LOGGED_IN_KEY);
