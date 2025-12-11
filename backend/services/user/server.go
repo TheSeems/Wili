@@ -91,7 +91,11 @@ func (s *server) PostAuthYandex(w http.ResponseWriter, r *http.Request) {
 	accessToken, err := s.exchangeYandexCode(req.Code, req.RedirectURI)
 	if err != nil {
 		log.Printf("[AUTH] Failed to exchange Yandex code: %v", err)
-		w.WriteHeader(http.StatusUnauthorized)
+		if strings.Contains(err.Error(), "missing Yandex OAuth credentials") {
+			w.WriteHeader(http.StatusInternalServerError)
+		} else {
+			w.WriteHeader(http.StatusUnauthorized)
+		}
 		return
 	}
 
@@ -321,7 +325,7 @@ func (s *server) exchangeYandexCode(code string, redirectURIFromClient string) (
 	}
 
 	if clientID == "" || clientSecret == "" {
-		return "", fmt.Errorf("missing Yandex OAuth credentials")
+		return "", fmt.Errorf("missing Yandex OAuth credentials (YANDEX_CLIENT_ID / YANDEX_CLIENT_SECRET)")
 	}
 
 	data := url.Values{}

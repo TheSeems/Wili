@@ -86,12 +86,12 @@ spec:
               key: JWT_SECRET
         - name: YANDEX_CLIENT_ID
           valueFrom:
-            configMapKeyRef:
+            secretKeyRef:
               name: yandex-auth-config
               key: YANDEX_CLIENT_ID
         - name: YANDEX_CLIENT_SECRET
           valueFrom:
-            configMapKeyRef:
+            secretKeyRef:
               name: yandex-auth-config
               key: YANDEX_CLIENT_SECRET
         resources:
