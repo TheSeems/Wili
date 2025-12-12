@@ -16,8 +16,9 @@ import (
 )
 
 type wishlistResponse struct {
-	Title string         `json:"title"`
-	Items []wishlistItem `json:"items"`
+	Title       string         `json:"title"`
+	Description *string        `json:"description"`
+	Items       []wishlistItem `json:"items"`
 }
 
 type wishlistItem struct {
@@ -194,7 +195,14 @@ func (b *bot) handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	startParam := extractStartParam(upd.Message)
 	if startParam == "" {
-		log.Printf("webhook ignored: no start param (chat=%d)", upd.Message.Chat.ID)
+		if strings.HasPrefix(strings.TrimSpace(upd.Message.Text), "/start") {
+			log.Printf("webhook start: chat=%d start_param=<empty>", upd.Message.Chat.ID)
+			if err := b.sendMiniAppEntry(ctx, upd.Message.Chat.ID); err != nil {
+				log.Printf("send miniapp entry failed: chat=%d err=%v", upd.Message.Chat.ID, err)
+			}
+		} else {
+			log.Printf("webhook ignored: no start param (chat=%d)", upd.Message.Chat.ID)
+		}
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -222,6 +230,44 @@ func (b *bot) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		log.Printf("send preview failed: chat=%d list=%s err=%v", upd.Message.Chat.ID, listID, err)
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (b *bot) sendMiniAppEntry(ctx context.Context, chatID int64) error {
+	text := "Откройте Wili в Telegram Mini App."
+	msg := sendMessageRequest{
+		ChatID:    chatID,
+		Text:      text,
+		ParseMode: "Markdown",
+		ReplyMarkup: &inlineKeyboardMarkup{
+			InlineKeyboard: [][]inlineKeyboardButton{
+				{
+					{Text: "Открыть Wili", WebApp: &webAppInfo{URL: b.cfg.webAppURL}},
+				},
+			},
+		},
+	}
+
+	body, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", b.cfg.botToken), strings.NewReader(string(body)))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := b.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("telegram sendMessage status %d", resp.StatusCode)
+	}
+	return nil
 }
 
 func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) error {
@@ -260,24 +306,31 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 		return b.answerInlineQuery(ctx, q.ID, []interface{}{errCard})
 	}
 
-	totalItems := len(wl.Items)
-	status := fmt.Sprintf("Всего предметов: %d", totalItems)
-
 	webAppURL := b.miniAppDeepLink(listID)
 	fallbackURL := fmt.Sprintf("%s/wishlists/%s", b.cfg.webFallback, listID)
 	log.Printf("inline query resolved: id=%s list=%s url=%s", q.ID, listID, webAppURL)
 
-	description := "Посмотрите список подарков и забронируйте то, что хотите подарить."
-	messageText := fmt.Sprintf("*«%s»*\n%s\n\n%s\n\nМожно открыть по кнопке ниже или в [web](%s)", wl.Title, status, description, fallbackURL)
+	baseDescription := "Посмотрите список подарков и забронируйте то, что хотите подарить."
+	wlDesc := strings.TrimSpace(func() string {
+		if wl.Description == nil {
+			return ""
+		}
+		return *wl.Description
+	}())
+	if wlDesc != "" {
+		baseDescription = fmt.Sprintf("%s\n\n%s", wlDesc, baseDescription)
+	}
+	messageText := fmt.Sprintf("*«%s»*\n\n%s\n\nЕсли не работает кнопка, можно открыть в [web](%s)", wl.Title, baseDescription, fallbackURL)
 
 	result := map[string]interface{}{
 		"type":        "article",
 		"id":          fmt.Sprintf("wishlist_%s", listID),
 		"title":       wl.Title,
-		"description": status,
+		"description": "Открыть вишлист",
 		"input_message_content": map[string]interface{}{
-			"message_text": messageText,
-			"parse_mode":   "Markdown",
+			"message_text":             messageText,
+			"parse_mode":               "Markdown",
+			"disable_web_page_preview": true,
 		},
 		"reply_markup": inlineKeyboardMarkup{
 			InlineKeyboard: [][]inlineKeyboardButton{
@@ -405,14 +458,20 @@ func (b *bot) sendWishlistPreview(ctx context.Context, chatID int64, listID stri
 		return err
 	}
 
-	totalItems := len(wl.Items)
-	status := fmt.Sprintf("Всего предметов: %d", totalItems)
-
 	webAppURL := fmt.Sprintf("%s?start=list_%s", b.cfg.webAppURL, listID)
 	fallbackURL := fmt.Sprintf("%s/wishlists/%s", b.cfg.webFallback, listID)
 
-	description := "Посмотрите список подарков и забронируйте то, что хотите подарить. Чтобы увидеть, что уже забронировано, откройте вишлист."
-	text := fmt.Sprintf("*«%s»*\n%s\n\n%s\n\nМожно посмотреть по кнопке ниже или в [web](%s)", wl.Title, status, description, fallbackURL)
+	baseDescription := "Посмотрите список желаний и забронируйте то, что хотите подарить. Чтобы увидеть, что уже забронировано, откройте вишлист."
+	wlDesc := strings.TrimSpace(func() string {
+		if wl.Description == nil {
+			return ""
+		}
+		return *wl.Description
+	}())
+	if wlDesc != "" {
+		baseDescription = fmt.Sprintf("%s\n\n%s", wlDesc, baseDescription)
+	}
+	text := fmt.Sprintf("*«%s»*\n\n%s\n\nМожно посмотреть по кнопке ниже или в [web](%s)", wl.Title, baseDescription, fallbackURL)
 
 	msg := sendMessageRequest{
 		ChatID:    chatID,
@@ -447,7 +506,7 @@ func (b *bot) sendWishlistPreview(ctx context.Context, chatID int64, listID stri
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("telegram sendMessage status %d", resp.StatusCode)
 	}
-	log.Printf("preview sent: chat=%d list=%s status=%d items=%d", chatID, listID, resp.StatusCode, totalItems)
+	log.Printf("preview sent: chat=%d list=%s status=%d", chatID, listID, resp.StatusCode)
 	return nil
 }
 

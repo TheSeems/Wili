@@ -14,6 +14,7 @@
 
   $: ({ token, user, isLoading, justLoggedIn } = $authStore);
   let telegramLoginAvailable = false;
+  let telegramInitData: string = "";
 
   $: if (justLoggedIn && user) {
     makeAlert({
@@ -48,19 +49,28 @@
   }
 
   async function loginWithTelegram() {
-    const tg = (window as any)?.Telegram?.WebApp;
-    const initData = (tg?.initData as string | undefined) || "";
-    if (!initData) return;
-    await exchangeTelegramInitData(initData);
+    if (!telegramInitData) return;
+    await exchangeTelegramInitData(telegramInitData);
   }
 
   onMount(() => {
     if (!browser) return;
-    telegramLoginAvailable = Boolean((window as any)?.Telegram?.WebApp?.initData);
+    const tg = (window as any)?.Telegram?.WebApp;
+    const fromSdk = (tg?.initData as string | undefined) || "";
+    if (fromSdk) {
+      telegramInitData = fromSdk;
+    } else {
+      const hash = window.location.hash?.replace(/^#/, "");
+      if (hash) {
+        const params = new URLSearchParams(hash);
+        telegramInitData = params.get("tgWebAppData") || "";
+      }
+    }
+    telegramLoginAvailable = Boolean(telegramInitData);
   });
 </script>
 
-<section class="flex flex-col items-center justify-center px-4 py-10">
+<section class="flex h-[80vh] flex-col items-center justify-center px-4 py-10">
   {#if isLoading}
     <div class="flex flex-col items-center gap-4">
       <div class="h-12 w-12 animate-spin rounded-full border-b-2 border-gray-900"></div>

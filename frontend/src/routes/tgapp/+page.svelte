@@ -39,6 +39,7 @@
   const telegramBotUsername = env.PUBLIC_TELEGRAM_BOT_USERNAME;
   let telegramLoginLoading = $state(false);
   let telegramLoginAvailable = $state(false);
+  let telegramInitData = $state("");
 
   function parseListId(): string | null {
     if (typeof window === "undefined") return null;
@@ -167,11 +168,6 @@
 
   onMount(() => {
     listId = parseListId();
-    if (!listId) {
-      window.location.replace("https://wili.me");
-      return;
-    }
-
     const tg = (window as any)?.Telegram?.WebApp;
     if (tg) {
       tg.ready?.();
@@ -181,17 +177,21 @@
       tg.setBottomBarColor?.("bg_color");
       const user = tg.initDataUnsafe?.user;
       setDefaultNameFromUser(user);
-      telegramLoginAvailable = Boolean(tg.initData);
 
-      const initData = (tg.initData as string | undefined) || "";
-      if (!telegramAuthAttempted && !$authStore.token && initData) {
-        telegramAuthAttempted = true;
-        telegramLoginLoading = true;
-        exchangeTelegramInitData(initData).catch((e) =>
-          console.warn("telegram auth failed", e)
-        ).finally(() => (telegramLoginLoading = false));
+      const fromSdk = (tg.initData as string | undefined) || "";
+      if (fromSdk) {
+        telegramInitData = fromSdk;
+      }
+    } else {
+      const hash = window.location.hash?.replace(/^#/, "");
+      if (hash) {
+        const params = new URLSearchParams(hash);
+        telegramInitData = params.get("tgWebAppData") || "";
       }
     }
+
+    telegramLoginAvailable = Boolean(telegramInitData);
+
     if (!defaultName) {
       const hashUser = extractUserFromHash();
       setDefaultNameFromUser(hashUser);
@@ -200,16 +200,41 @@
       anonymous = true;
     }
 
+    if (!telegramAuthAttempted && !$authStore.token && telegramInitData) {
+      telegramAuthAttempted = true;
+      telegramLoginLoading = true;
+      exchangeTelegramInitData(telegramInitData)
+        .catch((e) => console.warn("telegram auth failed", e))
+        .finally(() => (telegramLoginLoading = false));
+    }
+
+    if (!listId) {
+      const sp = new URLSearchParams(window.location.search);
+      const hasTgParams =
+        telegramLoginAvailable ||
+        sp.has("tgWebAppVersion") ||
+        sp.has("tgWebAppPlatform") ||
+        sp.has("tgWebAppStartParam") ||
+        Boolean(window.location.hash?.includes("tgWebAppData="));
+
+      if (!hasTgParams) {
+        window.location.replace("https://wili.me");
+        return;
+      }
+
+      loading = false;
+      error = null;
+      return;
+    }
+
     loadWishlist();
   });
 
   async function loginWithTelegram() {
-    const tg = (window as any)?.Telegram?.WebApp;
-    const initData = (tg?.initData as string | undefined) || "";
-    if (!initData) return;
+    if (!telegramInitData) return;
     telegramLoginLoading = true;
     try {
-      await exchangeTelegramInitData(initData);
+      await exchangeTelegramInitData(telegramInitData);
       showSuccessAlert($_("home.welcomeTitle"), undefined, "bottom-center");
     } catch (e) {
       console.warn("telegram auth failed", e);
@@ -246,6 +271,23 @@
     <Card class="border-destructive">
       <CardContent class="pt-6 text-destructive">
         {error}
+      </CardContent>
+    </Card>
+  {:else if !listId}
+    <Card>
+      <CardHeader>
+        <CardTitle>Wili</CardTitle>
+        <CardDescription>Откройте вишлист по ссылке из чата.</CardDescription>
+      </CardHeader>
+      <CardContent class="flex flex-col gap-3">
+        {#if telegramLoginAvailable && !$authStore.token}
+          <Button disabled={telegramLoginLoading} onclick={loginWithTelegram}>
+            {telegramLoginLoading ? $_("common.loading") : $_("auth.loginWithTelegram")}
+          </Button>
+        {/if}
+        <Button variant="outline" href="https://wili.me" target="_blank" rel="noreferrer">
+          Открыть wili.me
+        </Button>
       </CardContent>
     </Card>
   {:else if wishlist}

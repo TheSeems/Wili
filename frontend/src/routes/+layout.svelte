@@ -12,10 +12,19 @@
   let { children } = $props();
 
   let i18nReady = $state(!browser); // SSR is ready immediately
+  let hideFooter = $state(false);
 
   onMount(() => {
     if (browser) {
       initApi();
+      const hasTgObj = Boolean((window as any)?.Telegram?.WebApp);
+      const sp = new URLSearchParams(window.location.search);
+      const hasTgParams =
+        sp.has("tgWebAppVersion") ||
+        sp.has("tgWebAppPlatform") ||
+        sp.has("tgWebAppStartParam") ||
+        Boolean(window.location.hash?.includes("tgWebAppData="));
+      hideFooter = hasTgObj || hasTgParams;
     }
   });
 
@@ -76,7 +85,7 @@
 
   <ModeWatcher />
   {@render children?.()}
-  {#if page.url.pathname !== "/auth/callback" && !page.url.pathname.startsWith("/tgapp")}
+  {#if page.url.pathname !== "/auth/callback" && !page.url.pathname.startsWith("/tgapp") && !hideFooter}
     <footer class="mt-10 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
       <div class="flex items-center justify-center gap-4 opacity-70">
         <a
