@@ -8,6 +8,8 @@ data:
   BIND_ADDR: ":8080"
   WEBHOOK_PATH: "webhook"
   TELEGRAM_WEBAPP_URL: "https://tg.wili.me/tgapp"
+  TELEGRAM_MINIAPP_BOT_USERNAME: "wiliwishbot"
+  TELEGRAM_MINIAPP_NAME: "tgapp"
   WISHLIST_API_BASE_URL: "https://api.wili.me/wishlists"
   WISHES_WEB_URL: "https://wili.me"
 

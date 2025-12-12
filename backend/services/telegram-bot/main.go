@@ -91,13 +91,15 @@ type answerInlineQueryRequest struct {
 }
 
 type config struct {
-	botToken     string
-	apiBaseURL   string
-	webAppURL    string
-	webFallback  string
-	bindAddr     string
-	webhookPath  string
-	webhookToken string
+	botToken        string
+	apiBaseURL      string
+	webAppURL       string
+	webFallback     string
+	miniAppBot      string
+	miniAppName     string
+	bindAddr        string
+	webhookPath     string
+	webhookToken    string
 }
 
 func mustEnv(key string) string {
@@ -114,10 +116,19 @@ func loadConfig() config {
 		apiBaseURL:   strings.TrimRight(mustEnv("WISHLIST_API_BASE_URL"), "/"),
 		webAppURL:    strings.TrimRight(mustEnv("TELEGRAM_WEBAPP_URL"), "/"),
 		webFallback:  strings.TrimRight(mustEnv("WISHES_WEB_URL"), "/"),
+		miniAppBot:   strings.TrimSpace(os.Getenv("TELEGRAM_MINIAPP_BOT_USERNAME")),
+		miniAppName:  strings.TrimSpace(os.Getenv("TELEGRAM_MINIAPP_NAME")),
 		bindAddr:     envOrDefault("BIND_ADDR", ":8080"),
 		webhookPath:  envOrDefault("WEBHOOK_PATH", "webhook"),
 		webhookToken: envOrDefault("WEBHOOK_SECRET_TOKEN", ""),
 	}
+}
+
+func (b *bot) miniAppDeepLink(listID string) string {
+	if b.cfg.miniAppBot != "" && b.cfg.miniAppName != "" {
+		return fmt.Sprintf("https://t.me/%s/%s?startapp=list_%s", b.cfg.miniAppBot, b.cfg.miniAppName, listID)
+	}
+	return fmt.Sprintf("%s?start=list_%s", b.cfg.webAppURL, listID)
 }
 
 func envOrDefault(key, def string) string {
@@ -240,7 +251,7 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 	totalItems := len(wl.Items)
 	status := fmt.Sprintf("Всего предметов: %d", totalItems)
 
-	webAppURL := fmt.Sprintf("%s?start=list_%s", b.cfg.webAppURL, listID)
+	webAppURL := b.miniAppDeepLink(listID)
 	fallbackURL := fmt.Sprintf("%s/wishlists/%s", b.cfg.webFallback, listID)
 
 	description := "Посмотрите список подарков и забронируйте то, что хотите подарить."
