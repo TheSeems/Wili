@@ -128,6 +128,10 @@
     text-decoration: none;
     transition: all 0.2s ease;
     margin: 0.25rem 0;
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
   }
 
   /* Inline variant - smaller and more compact */
@@ -179,7 +183,8 @@
   }
 
   :global(.url-badge-domain) {
-    max-width: 300px;
+    max-width: 100%;
+    min-width: 0;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
