@@ -280,6 +280,40 @@ func (s *server) PostAuthTelegram(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
+func (s *server) PostAuthTelegramBot(w http.ResponseWriter, r *http.Request, params usergen.PostAuthTelegramBotParams) {
+	log.Printf("[AUTH] Telegram-bot auth request from %s", r.RemoteAddr)
+
+	expected := strings.TrimSpace(os.Getenv("TELEGRAM_BOT_TOKEN"))
+	if expected == "" || strings.TrimSpace(params.XWiliBotToken) != expected {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	var req usergen.TelegramBotAuthRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if req.TelegramId == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	u, err := s.repo.GetByTelegramID(r.Context(), req.TelegramId)
+	if err != nil {
+		if err == ErrNotFound {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	tok, exp := sign(u.Id.String())
+	resp := usergen.AuthResponse{AccessToken: tok, ExpiresIn: exp, User: *u}
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
 func (s *server) GetUsersMe(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseBearer(r)
 	if !ok {

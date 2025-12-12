@@ -41,6 +41,12 @@ type TelegramAuthRequest struct {
 	InitData string `json:"initData"`
 }
 
+// TelegramBotAuthRequest defines model for TelegramBotAuthRequest.
+type TelegramBotAuthRequest struct {
+	// TelegramId Telegram user id (`from.id`) from Bot API updates.
+	TelegramId int64 `json:"telegramId"`
+}
+
 // UpdateUserRequest defines model for UpdateUserRequest.
 type UpdateUserRequest struct {
 	AvatarUrl   *string `json:"avatarUrl,omitempty"`
@@ -75,8 +81,17 @@ type YandexAuthRequest struct {
 	Code string `json:"code"`
 }
 
+// PostAuthTelegramBotParams defines parameters for PostAuthTelegramBot.
+type PostAuthTelegramBotParams struct {
+	// XWiliBotToken Shared secret token used by internal Telegram bot calls.
+	XWiliBotToken string `json:"X-Wili-Bot-Token"`
+}
+
 // PostAuthTelegramJSONRequestBody defines body for PostAuthTelegram for application/json ContentType.
 type PostAuthTelegramJSONRequestBody = TelegramAuthRequest
+
+// PostAuthTelegramBotJSONRequestBody defines body for PostAuthTelegramBot for application/json ContentType.
+type PostAuthTelegramBotJSONRequestBody = TelegramBotAuthRequest
 
 // PostAuthValidateJSONRequestBody defines body for PostAuthValidate for application/json ContentType.
 type PostAuthValidateJSONRequestBody = ValidateTokenRequest
@@ -165,6 +180,11 @@ type ClientInterface interface {
 
 	PostAuthTelegram(ctx context.Context, body PostAuthTelegramJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// PostAuthTelegramBotWithBody request with any body
+	PostAuthTelegramBotWithBody(ctx context.Context, params *PostAuthTelegramBotParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PostAuthTelegramBot(ctx context.Context, params *PostAuthTelegramBotParams, body PostAuthTelegramBotJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// PostAuthValidateWithBody request with any body
 	PostAuthValidateWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -201,6 +221,30 @@ func (c *Client) PostAuthTelegramWithBody(ctx context.Context, contentType strin
 
 func (c *Client) PostAuthTelegram(ctx context.Context, body PostAuthTelegramJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPostAuthTelegramRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostAuthTelegramBotWithBody(ctx context.Context, params *PostAuthTelegramBotParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostAuthTelegramBotRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostAuthTelegramBot(ctx context.Context, params *PostAuthTelegramBotParams, body PostAuthTelegramBotJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostAuthTelegramBotRequest(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -343,6 +387,59 @@ func NewPostAuthTelegramRequestWithBody(server string, contentType string, body 
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewPostAuthTelegramBotRequest calls the generic PostAuthTelegramBot builder with application/json body
+func NewPostAuthTelegramBotRequest(server string, params *PostAuthTelegramBotParams, body PostAuthTelegramBotJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPostAuthTelegramBotRequestWithBody(server, params, "application/json", bodyReader)
+}
+
+// NewPostAuthTelegramBotRequestWithBody generates requests for PostAuthTelegramBot with any type of body
+func NewPostAuthTelegramBotRequestWithBody(server string, params *PostAuthTelegramBotParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/auth/telegram-bot")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-Wili-Bot-Token", runtime.ParamLocationHeader, params.XWiliBotToken)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Wili-Bot-Token", headerParam0)
+
+	}
 
 	return req, nil
 }
@@ -576,6 +673,11 @@ type ClientWithResponsesInterface interface {
 
 	PostAuthTelegramWithResponse(ctx context.Context, body PostAuthTelegramJSONRequestBody, reqEditors ...RequestEditorFn) (*PostAuthTelegramResponse, error)
 
+	// PostAuthTelegramBotWithBodyWithResponse request with any body
+	PostAuthTelegramBotWithBodyWithResponse(ctx context.Context, params *PostAuthTelegramBotParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostAuthTelegramBotResponse, error)
+
+	PostAuthTelegramBotWithResponse(ctx context.Context, params *PostAuthTelegramBotParams, body PostAuthTelegramBotJSONRequestBody, reqEditors ...RequestEditorFn) (*PostAuthTelegramBotResponse, error)
+
 	// PostAuthValidateWithBodyWithResponse request with any body
 	PostAuthValidateWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostAuthValidateResponse, error)
 
@@ -614,6 +716,28 @@ func (r PostAuthTelegramResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r PostAuthTelegramResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PostAuthTelegramBotResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AuthResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PostAuthTelegramBotResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PostAuthTelegramBotResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -747,6 +871,23 @@ func (c *ClientWithResponses) PostAuthTelegramWithResponse(ctx context.Context, 
 	return ParsePostAuthTelegramResponse(rsp)
 }
 
+// PostAuthTelegramBotWithBodyWithResponse request with arbitrary body returning *PostAuthTelegramBotResponse
+func (c *ClientWithResponses) PostAuthTelegramBotWithBodyWithResponse(ctx context.Context, params *PostAuthTelegramBotParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostAuthTelegramBotResponse, error) {
+	rsp, err := c.PostAuthTelegramBotWithBody(ctx, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostAuthTelegramBotResponse(rsp)
+}
+
+func (c *ClientWithResponses) PostAuthTelegramBotWithResponse(ctx context.Context, params *PostAuthTelegramBotParams, body PostAuthTelegramBotJSONRequestBody, reqEditors ...RequestEditorFn) (*PostAuthTelegramBotResponse, error) {
+	rsp, err := c.PostAuthTelegramBot(ctx, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostAuthTelegramBotResponse(rsp)
+}
+
 // PostAuthValidateWithBodyWithResponse request with arbitrary body returning *PostAuthValidateResponse
 func (c *ClientWithResponses) PostAuthValidateWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostAuthValidateResponse, error) {
 	rsp, err := c.PostAuthValidateWithBody(ctx, contentType, body, reqEditors...)
@@ -825,6 +966,32 @@ func ParsePostAuthTelegramResponse(rsp *http.Response) (*PostAuthTelegramRespons
 	}
 
 	response := &PostAuthTelegramResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AuthResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePostAuthTelegramBotResponse parses an HTTP response from a PostAuthTelegramBotWithResponse call
+func ParsePostAuthTelegramBotResponse(rsp *http.Response) (*PostAuthTelegramBotResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PostAuthTelegramBotResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -977,6 +1144,9 @@ type ServerInterface interface {
 	// Authenticate a user via Telegram Mini App initData
 	// (POST /auth/telegram)
 	PostAuthTelegram(w http.ResponseWriter, r *http.Request)
+	// Issue JWT for linked Telegram user (internal)
+	// (POST /auth/telegram-bot)
+	PostAuthTelegramBot(w http.ResponseWriter, r *http.Request, params PostAuthTelegramBotParams)
 	// Validate JWT token and return user information (internal endpoint)
 	// (POST /auth/validate)
 	PostAuthValidate(w http.ResponseWriter, r *http.Request)
@@ -1001,6 +1171,12 @@ type Unimplemented struct{}
 // Authenticate a user via Telegram Mini App initData
 // (POST /auth/telegram)
 func (_ Unimplemented) PostAuthTelegram(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Issue JWT for linked Telegram user (internal)
+// (POST /auth/telegram-bot)
+func (_ Unimplemented) PostAuthTelegramBot(w http.ResponseWriter, r *http.Request, params PostAuthTelegramBotParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1054,6 +1230,50 @@ func (siw *ServerInterfaceWrapper) PostAuthTelegram(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAuthTelegram(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAuthTelegramBot operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthTelegramBot(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PostAuthTelegramBotParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "X-Wili-Bot-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Wili-Bot-Token")]; found {
+		var XWiliBotToken string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Wili-Bot-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Wili-Bot-Token", valueList[0], &XWiliBotToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Wili-Bot-Token", Err: err})
+			return
+		}
+
+		params.XWiliBotToken = XWiliBotToken
+
+	} else {
+		err := fmt.Errorf("Header parameter X-Wili-Bot-Token is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "X-Wili-Bot-Token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAuthTelegramBot(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1289,6 +1509,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/telegram", wrapper.PostAuthTelegram)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/telegram-bot", wrapper.PostAuthTelegramBot)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/validate", wrapper.PostAuthValidate)

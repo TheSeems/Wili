@@ -22,6 +22,14 @@ type wishlistResponse struct {
 	Items       []wishlistItem `json:"items"`
 }
 
+type wishlistListResponse struct {
+	Wishlists []struct {
+		ID          string  `json:"id"`
+		Title       string  `json:"title"`
+		Description *string `json:"description"`
+	} `json:"wishlists"`
+}
+
 type wishlistItem struct {
 	Booking *itemBooking `json:"booking"`
 }
@@ -98,6 +106,7 @@ type answerInlineQueryRequest struct {
 type config struct {
 	botToken     string
 	apiBaseURL   string
+	userAPIBase  string
 	webAppURL    string
 	webFallback  string
 	miniAppBot   string
@@ -119,6 +128,7 @@ func loadConfig() config {
 	return config{
 		botToken:     mustEnv("TELEGRAM_BOT_TOKEN"),
 		apiBaseURL:   strings.TrimRight(mustEnv("WISHLIST_API_BASE_URL"), "/"),
+		userAPIBase:  strings.TrimRight(envOrDefault("USER_API_BASE_URL", "https://api.wili.me"), "/"),
 		webAppURL:    strings.TrimRight(mustEnv("TELEGRAM_WEBAPP_URL"), "/"),
 		webFallback:  strings.TrimRight(mustEnv("WISHES_WEB_URL"), "/"),
 		miniAppBot:   strings.TrimSpace(os.Getenv("TELEGRAM_MINIAPP_BOT_USERNAME")),
@@ -203,6 +213,10 @@ var botDict = map[string]map[string]string{
 		keyInlineHelpTitle:     "Как поделиться вишлистом",
 		keyInlineHelpDesc:      "Формат: wishlist:<uuid>",
 		keyInlineHelpMessage:   "Введите запрос в формате: wishlist:<uuid>",
+		"inline.my.title":      "Мои вишлисты",
+		"inline.my.desc":       "Выберите вишлист и отправьте его в чат",
+		"inline.my.notLinked":  "Аккаунт не привязан. Откройте Mini App и войдите через Telegram.",
+		"inline.my.empty":      "У вас пока нет вишлистов. Создайте первый в Mini App.",
 		keyInlineErrorTitle:    "Не удалось загрузить вишлист",
 		keyInlineErrorDesc:     "Проверьте id и попробуйте снова",
 		keyInlineErrorMessage:  "Не удалось загрузить вишлист. Проверьте id и попробуйте снова.",
@@ -223,6 +237,10 @@ var botDict = map[string]map[string]string{
 		keyInlineHelpTitle:     "How to share a wishlist",
 		keyInlineHelpDesc:      "Format: wishlist:<uuid>",
 		keyInlineHelpMessage:   "Type a query in the format: wishlist:<uuid>",
+		"inline.my.title":      "My wishlists",
+		"inline.my.desc":       "Pick a wishlist and send it to chat",
+		"inline.my.notLinked":  "Account is not linked. Open the Mini App and log in with Telegram.",
+		"inline.my.empty":      "You don’t have any wishlists yet. Create one in the Mini App.",
 		keyInlineErrorTitle:    "Couldn't load wishlist",
 		keyInlineErrorDesc:     "Check the id and try again",
 		keyInlineErrorMessage:  "Couldn't load wishlist. Check the id and try again.",
@@ -250,6 +268,13 @@ func tr(lang, key string) string {
 
 func trf(lang, key string, args ...any) string {
 	return fmt.Sprintf(tr(lang, key), args...)
+}
+
+func (b *bot) miniAppBotLink() string {
+	if b.cfg.miniAppBot != "" {
+		return fmt.Sprintf("https://t.me/%s", b.cfg.miniAppBot)
+	}
+	return b.cfg.webAppURL
 }
 
 func (b *bot) handleWebhook(w http.ResponseWriter, r *http.Request) {
@@ -363,6 +388,63 @@ func esc(s string) string {
 	return html.EscapeString(s)
 }
 
+func (b *bot) fetchTelegramJWT(ctx context.Context, telegramID int64) (string, error) {
+	body := fmt.Sprintf(`{"telegramId":%d}`, telegramID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/auth/telegram-bot", b.cfg.userAPIBase), strings.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Wili-Bot-Token", b.cfg.botToken)
+
+	resp, err := b.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return "", fmt.Errorf("not linked")
+	}
+	if resp.StatusCode != http.StatusOK {
+		bb, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("user-service auth status %d body=%s", resp.StatusCode, strings.TrimSpace(string(bb)))
+	}
+
+	var out struct {
+		AccessToken string `json:"accessToken"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(out.AccessToken) == "" {
+		return "", fmt.Errorf("empty token")
+	}
+	return out.AccessToken, nil
+}
+
+func (b *bot) fetchMyWishlists(ctx context.Context, jwt string) (*wishlistListResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, b.cfg.apiBaseURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	resp, err := b.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("wishlist api status %d", resp.StatusCode)
+	}
+	var wl wishlistListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&wl); err != nil {
+		return nil, err
+	}
+	return &wl, nil
+}
+
 func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) error {
 	if q == nil {
 		return nil
@@ -371,7 +453,93 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 	log.Printf("inline query: from=%d id=%s q=%q", q.From.ID, q.ID, q.Query)
 	lang := q.From.LanguageCode
 
-	listID := parseInlineQueryListID(q.Query)
+	queryText := strings.TrimSpace(q.Query)
+	listID := parseInlineQueryListID(queryText)
+	if listID == "" && queryText == "" {
+		jwt, err := b.fetchTelegramJWT(ctx, q.From.ID)
+		if err != nil {
+			msg := tr(lang, "inline.my.notLinked")
+			card := map[string]interface{}{
+				"type":        "article",
+				"id":          "my_not_linked",
+				"title":       tr(lang, "inline.my.title"),
+				"description": msg,
+				"input_message_content": map[string]interface{}{
+					"message_text": msg,
+				},
+				"reply_markup": inlineKeyboardMarkup{
+					InlineKeyboard: [][]inlineKeyboardButton{
+						{
+							{Text: tr(lang, keyMiniAppEntryButton), URL: b.miniAppBotLink()},
+						},
+					},
+				},
+			}
+			return b.answerInlineQuery(ctx, q.ID, []interface{}{card})
+		}
+
+		lists, err := b.fetchMyWishlists(ctx, jwt)
+		if err != nil {
+			log.Printf("inline query my wishlists failed: from=%d err=%v", q.From.ID, err)
+			return b.answerInlineQuery(ctx, q.ID, []interface{}{})
+		}
+		if lists == nil || len(lists.Wishlists) == 0 {
+			msg := tr(lang, "inline.my.empty")
+			card := map[string]interface{}{
+				"type":        "article",
+				"id":          "my_empty",
+				"title":       tr(lang, "inline.my.title"),
+				"description": msg,
+				"input_message_content": map[string]interface{}{
+					"message_text": msg,
+				},
+				"reply_markup": inlineKeyboardMarkup{
+					InlineKeyboard: [][]inlineKeyboardButton{
+						{
+							{Text: tr(lang, keyMiniAppEntryButton), URL: b.miniAppBotLink()},
+						},
+					},
+				},
+			}
+			return b.answerInlineQuery(ctx, q.ID, []interface{}{card})
+		}
+
+		results := make([]interface{}, 0, len(lists.Wishlists))
+		for i, wl := range lists.Wishlists {
+			if i >= 10 {
+				break
+			}
+			webAppURL := b.miniAppDeepLink(wl.ID)
+			fallbackURL := fmt.Sprintf("%s/wishlists/%s", b.cfg.webFallback, wl.ID)
+
+			desc := tr(lang, keyInlineBaseDesc)
+			if wl.Description != nil && strings.TrimSpace(*wl.Description) != "" {
+				desc = fmt.Sprintf("%s\n\n%s", strings.TrimSpace(*wl.Description), desc)
+			}
+			messageText := trf(lang, keyInlineMessage, esc(wl.Title), esc(desc), esc(fallbackURL))
+			result := map[string]interface{}{
+				"type":        "article",
+				"id":          fmt.Sprintf("my_%s", wl.ID),
+				"title":       wl.Title,
+				"description": tr(lang, "inline.my.desc"),
+				"input_message_content": map[string]interface{}{
+					"message_text":             messageText,
+					"parse_mode":               "HTML",
+					"disable_web_page_preview": true,
+				},
+				"reply_markup": inlineKeyboardMarkup{
+					InlineKeyboard: [][]inlineKeyboardButton{
+						{
+							{Text: tr(lang, keyInlineOpenButton), URL: webAppURL},
+						},
+					},
+				},
+			}
+			results = append(results, result)
+		}
+		return b.answerInlineQuery(ctx, q.ID, results)
+	}
+
 	if listID == "" {
 		help := map[string]interface{}{
 			"type":        "article",

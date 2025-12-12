@@ -28,14 +28,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/YandexAuthRequest'
+              $ref: "#/components/schemas/YandexAuthRequest"
       responses:
         "200":
           description: Successful authentication
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: "#/components/schemas/AuthResponse"
         "400":
           description: Invalid request or code
         "401":
@@ -52,18 +52,50 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TelegramAuthRequest'
+              $ref: "#/components/schemas/TelegramAuthRequest"
       responses:
         "200":
           description: Successful authentication
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: "#/components/schemas/AuthResponse"
         "400":
           description: Invalid request
         "401":
           description: Authentication failed
+
+  /auth/telegram-bot:
+    post:
+      summary: Issue JWT for linked Telegram user (internal)
+      description: |
+        Internal endpoint for the Telegram bot to obtain a JWT for a user that already has `telegram_id` linked.
+      tags: [Auth]
+      security: []
+      parameters:
+        - name: X-Wili-Bot-Token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Shared secret token used by internal Telegram bot calls.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelegramBotAuthRequest"
+      responses:
+        "200":
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+        "404":
+          description: User not linked
 
   /auth/validate:
     post:
@@ -77,14 +109,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ValidateTokenRequest'
+              $ref: "#/components/schemas/ValidateTokenRequest"
       responses:
         "200":
           description: Token is valid
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidateTokenResponse'
+                $ref: "#/components/schemas/ValidateTokenResponse"
         "401":
           description: Invalid or expired token
 
@@ -100,7 +132,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: "#/components/schemas/User"
         "401":
           description: Missing or invalid JWT
     put:
@@ -113,14 +145,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateUserRequest'
+              $ref: "#/components/schemas/UpdateUserRequest"
       responses:
         "200":
           description: Updated user profile
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: "#/components/schemas/User"
         "400":
           description: Invalid input
         "401":
@@ -143,7 +175,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PublicUserProfile'
+                $ref: "#/components/schemas/PublicUserProfile"
         "404":
           description: User not found
 
@@ -169,6 +201,14 @@ components:
         initData:
           type: string
           description: Raw Telegram Mini App initData string (querystring format).
+    TelegramBotAuthRequest:
+      type: object
+      required: [telegramId]
+      properties:
+        telegramId:
+          type: integer
+          format: int64
+          description: Telegram user id (`from.id`) from Bot API updates.
     AuthResponse:
       type: object
       required: [accessToken, expiresIn, user]
@@ -181,7 +221,7 @@ components:
           format: int64
           description: Token lifetime in seconds
         user:
-          $ref: '#/components/schemas/User'
+          $ref: "#/components/schemas/User"
 
     # User profile
     User:
@@ -225,9 +265,8 @@ components:
           type: boolean
           description: Whether the token is valid
         user:
-          $ref: '#/components/schemas/User'
+          $ref: "#/components/schemas/User"
 
     PublicUserProfile:
       allOf:
-        - $ref: '#/components/schemas/User'
-
+        - $ref: "#/components/schemas/User"
