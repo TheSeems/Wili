@@ -58,7 +58,7 @@ This will set up Podman containers for PostgreSQL and MongoDB, create databases,
 
 2) Backend (local)
 - Requires Postgres (user svc) and MongoDB (wishlist svc)
-- Set env vars (e.g. DB, JWT_SIGNING_KEY, YANDEX_CLIENT_ID/SECRET)
+- Set env vars (e.g. DB, JWT_SECRET, YANDEX_CLIENT_ID/SECRET)
 - cd backend/services/user && go run .
 - cd backend/services/wishlist && go run .
 

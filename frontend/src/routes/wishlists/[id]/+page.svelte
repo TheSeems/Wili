@@ -287,7 +287,22 @@
 
   function shareWishlistToTelegram() {
     if (!wishlist) return;
-    const startParam = `list_${wishlist.id}`;
+    const tg = (window as any)?.Telegram?.WebApp;
+    if (tg?.switchInlineQuery) {
+      try {
+        tg.switchInlineQuery(`wishlist:${wishlist.id}`, [
+          "users",
+          "groups",
+          "supergroups",
+          "channels",
+        ]);
+        return;
+      } catch (e) {
+        console.warn("Telegram switchInlineQuery failed, falling back", e);
+      }
+    }
+
+    const startParam = `share_${wishlist.id}`;
 
     if (telegramBotUsername) {
       const link = `https://t.me/${telegramBotUsername}?start=${startParam}`;
@@ -295,8 +310,10 @@
       return;
     }
 
-    // Bot not configured: log and noop
-    console.warn("Telegram bot username is not configured. Set PUBLIC_TELEGRAM_BOT_USERNAME.");
+    const shareUrl = `${window.location.origin}/wishlists/${wishlist.id}`;
+    const text = `Wishlist: ${wishlist.title || ""}`.trim();
+    const tgShare = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`;
+    window.open(tgShare, "_blank", "noopener");
   }
 
   // Booking functions

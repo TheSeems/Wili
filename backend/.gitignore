@@ -8,8 +8,8 @@
 *.so
 *.dylib
 main
-user
-wishlist
+services/user/user
+services/wishlist/wishlist
 
 # Test binary, built with `go test -c`
 *.test

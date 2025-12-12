@@ -21,6 +21,7 @@ type dbUser struct {
 	DisplayName string       `db:"display_name"`
 	AvatarUrl   *string      `db:"avatar_url"`
 	Email       *types.Email `db:"email"`
+	TelegramID  *int64       `db:"telegram_id"`
 }
 
 // toUsergen converts dbUser to usergen.User
@@ -54,9 +55,16 @@ func (p *pgRepo) migrate() error {
 		id UUID PRIMARY KEY,
 		display_name TEXT NOT NULL,
 		avatar_url TEXT,
-		email TEXT UNIQUE
+		email TEXT UNIQUE,
+		telegram_id BIGINT UNIQUE
 	);`
-	_, err := p.db.Exec(query)
+	if _, err := p.db.Exec(query); err != nil {
+		return err
+	}
+	if _, err := p.db.Exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id BIGINT`); err != nil {
+		return err
+	}
+	_, err := p.db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS users_telegram_id_uq ON users (telegram_id) WHERE telegram_id IS NOT NULL`)
 	return err
 }
 
@@ -77,9 +85,18 @@ func (p *pgRepo) UpsertWithEmail(ctx context.Context, u *usergen.User, email str
 	return err
 }
 
+func (p *pgRepo) UpsertWithTelegramID(ctx context.Context, u *usergen.User, telegramID int64) error {
+	_, err := p.db.ExecContext(ctx, `INSERT INTO users (id, display_name, avatar_url, telegram_id)
+		VALUES ($1,$2,$3,$4)
+		ON CONFLICT (telegram_id) DO UPDATE SET
+			display_name=EXCLUDED.display_name, avatar_url=EXCLUDED.avatar_url`,
+		u.Id, u.DisplayName, u.AvatarUrl, telegramID)
+	return err
+}
+
 func (p *pgRepo) Get(ctx context.Context, id uuid.UUID) (*usergen.User, error) {
 	var u dbUser
-	err := p.db.GetContext(ctx, &u, `SELECT id, display_name, avatar_url, email FROM users WHERE id=$1`, id)
+	err := p.db.GetContext(ctx, &u, `SELECT id, display_name, avatar_url, email, telegram_id FROM users WHERE id=$1`, id)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
 			return nil, ErrNotFound
@@ -91,7 +108,19 @@ func (p *pgRepo) Get(ctx context.Context, id uuid.UUID) (*usergen.User, error) {
 
 func (p *pgRepo) GetByEmail(ctx context.Context, email string) (*usergen.User, error) {
 	var u dbUser
-	err := p.db.GetContext(ctx, &u, `SELECT id, display_name, avatar_url, email FROM users WHERE email=$1`, email)
+	err := p.db.GetContext(ctx, &u, `SELECT id, display_name, avatar_url, email, telegram_id FROM users WHERE email=$1`, email)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return u.toUsergen(), nil
+}
+
+func (p *pgRepo) GetByTelegramID(ctx context.Context, telegramID int64) (*usergen.User, error) {
+	var u dbUser
+	err := p.db.GetContext(ctx, &u, `SELECT id, display_name, avatar_url, email, telegram_id FROM users WHERE telegram_id=$1`, telegramID)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
 			return nil, ErrNotFound

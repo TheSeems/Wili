@@ -94,6 +94,11 @@ spec:
             secretKeyRef:
               name: yandex-auth-config
               key: YANDEX_CLIENT_SECRET
+        - name: TELEGRAM_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: telegram-bot-secret
+              key: TELEGRAM_BOT_TOKEN
         resources:
           requests:
             memory: "128Mi"

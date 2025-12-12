@@ -11,12 +11,15 @@
   import { Input } from "$lib/components/ui/input";
   import { saveBookingToken, getBookingToken, removeBookingToken } from "$lib/utils/booking-storage";
   import { showSuccessAlert, showInfoAlert } from "$lib/utils/alerts";
+  import { authStore } from "$lib/stores/auth";
+  import { exchangeTelegramInitData } from "$lib/auth";
   import {
     Loader2Icon,
     LinkIcon,
     CheckIcon,
     XIcon,
     ShieldOffIcon,
+    SendIcon,
   } from "@lucide/svelte";
 
   type Wishlist = components["schemas"]["Wishlist"];
@@ -32,6 +35,7 @@
   let anonymous = $state(false);
   let message = $state("");
   let defaultName: string | null = $state(null);
+  let telegramAuthAttempted = $state(false);
 
   function parseListId(): string | null {
     if (typeof window === "undefined") return null;
@@ -158,6 +162,14 @@
       tg.expand?.();
       const user = tg.initDataUnsafe?.user;
       setDefaultNameFromUser(user);
+
+      const initData = (tg.initData as string | undefined) || "";
+      if (!telegramAuthAttempted && !$authStore.token && initData) {
+        telegramAuthAttempted = true;
+        exchangeTelegramInitData(initData).catch((e) =>
+          console.warn("telegram auth failed", e)
+        );
+      }
     }
     if (!defaultName) {
       const hashUser = extractUserFromHash();
@@ -180,6 +192,30 @@
   function shortUrl(url: string): string {
     return url.replace(/^https?:\/\//, "");
   }
+
+  function shareToTelegram() {
+    if (!wishlist || !listId) return;
+
+    const tg = (window as any)?.Telegram?.WebApp;
+    if (tg?.switchInlineQuery) {
+      try {
+        tg.switchInlineQuery(`wishlist:${listId}`, [
+          "users",
+          "groups",
+          "supergroups",
+          "channels",
+        ]);
+        return;
+      } catch (e) {
+        console.warn("Telegram switchInlineQuery failed, falling back", e);
+      }
+    }
+
+    const shareUrl = `${window.location.origin}/wishlists/${wishlist.id}`;
+    const text = `Wishlist: ${wishlist.title || ""}`.trim();
+    const tgShare = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`;
+    window.open(tgShare, "_blank", "noopener");
+  }
 </script>
 
 <svelte:head>
@@ -200,17 +236,26 @@
     </Card>
   {:else if wishlist}
     <div class="p-0">
-      <div class="space-y-2">
-        <p class="text-xl font-semibold">{wishlist.title}</p>
+      <div class="flex items-start justify-between gap-3">
+        <div class="space-y-2">
+          <p class="text-xl font-semibold">{wishlist.title}</p>
+          {#if wishlist.description}
+            <ExpandableText
+              content={wishlist.description}
+              className="text-sm text-muted-foreground"
+              maxHeight={200}
+              useResponsive={false}
+              allowYandexMarket={false}
+              smallOverflowThreshold={0}
+            />
+          {/if}
+        </div>
+        <Button variant="outline" class="shrink-0 gap-2" onclick={shareToTelegram}>
+          <SendIcon class="h-4 w-4" />
+          {$_("wishlists.shareToTelegram")}
+        </Button>
         {#if wishlist.description}
-          <ExpandableText
-            content={wishlist.description}
-            className="text-sm text-muted-foreground"
-            maxHeight={200}
-            useResponsive={false}
-            allowYandexMarket={false}
-            smallOverflowThreshold={0}
-          />
+          <!-- description moved above -->
         {/if}
       </div>
     </div>
@@ -245,7 +290,7 @@
                     <div class="text-green-700/80 dark:text-green-200/80 text-sm">{item.booking.bookerName}</div>
                   {/if}
                 </div>
-                {#if getBookingToken(listId!, item.id)}
+                {#if listId && getBookingToken(listId, item.id)}
                   <Button size="sm" variant="outline" onclick={() => unbook(item)}>
                     <XIcon class="mr-2 h-4 w-4" />
                     {$_("common.cancel")}

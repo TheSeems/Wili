@@ -10,7 +10,7 @@ Auth and profiles.
 
 ## Run local
 
-Env: Postgres, `JWT_SIGNING_KEY`, `YANDEX_CLIENT_ID/SECRET`.
+Env: Postgres, `JWT_SECRET`, `YANDEX_CLIENT_ID/SECRET`.
 
 ```
 go run .

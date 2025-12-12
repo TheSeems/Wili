@@ -41,6 +41,30 @@ paths:
         "401":
           description: Authentication failed
 
+  /auth/telegram:
+    post:
+      summary: Authenticate a user via Telegram Mini App initData
+      description: |
+        Validates Telegram `initData` signature and returns a JWT access token.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramAuthRequest'
+      responses:
+        "200":
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication failed
+
   /auth/validate:
     post:
       summary: Validate JWT token and return user information (internal endpoint)
@@ -138,6 +162,13 @@ components:
         code:
           type: string
           description: OAuth authorization code returned by Yandex after user consent.
+    TelegramAuthRequest:
+      type: object
+      required: [initData]
+      properties:
+        initData:
+          type: string
+          description: Raw Telegram Mini App initData string (querystring format).
     AuthResponse:
       type: object
       required: [accessToken, expiresIn, user]

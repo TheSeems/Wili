@@ -87,6 +87,30 @@ export async function exchangeCode(code: string) {
   }
 }
 
+export async function exchangeTelegramInitData(initData: string) {
+  const body = { initData };
+  const res = await fetch(`${AUTH_API_BASE_URL}/auth/telegram`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error("Telegram auth failed");
+  const resp = (await res.json()) as AuthResponse;
+
+  const token = resp.accessToken;
+  if (browser) {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(resp.user));
+    localStorage.setItem(JUST_LOGGED_IN_KEY, "true");
+    authStore.set({
+      token,
+      user: resp.user,
+      isLoading: false,
+      justLoggedIn: true,
+    });
+  }
+}
+
 export function logout() {
   if (browser) {
     localStorage.removeItem(TOKEN_KEY);

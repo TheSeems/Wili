@@ -1,6 +1,10 @@
 package main
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,6 +12,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,11 +43,22 @@ type yandexUserInfo struct {
 	DefaultAvatarID string `json:"default_avatar_id"`
 }
 
+type telegramUser struct {
+	ID        int64  `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Username  string `json:"username"`
+	PhotoURL  string `json:"photo_url"`
+}
+
 func newServer(r UserRepo) *server { return &server{repo: r} }
 
-var jwtKey = []byte(os.Getenv("JWT_SIGNING_KEY"))
+var jwtKey = []byte(strings.TrimSpace(os.Getenv("JWT_SECRET")))
 
 func sign(userID string) (string, int64) {
+	if len(jwtKey) == 0 {
+		log.Fatalf("Missing required env: JWT_SECRET")
+	}
 	exp := time.Hour * 24 * 365 * 10
 	claims := jwt.MapClaims{"sub": userID, "exp": time.Now().Add(exp).Unix()}
 	t, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(jwtKey)
@@ -174,6 +191,96 @@ func (s *server) PostAuthYandex(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
+func (s *server) PostAuthTelegram(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[AUTH] Telegram auth request from %s", r.RemoteAddr)
+
+	type telegramAuthRequest struct {
+		InitData string `json:"initData"`
+	}
+
+	var req telegramAuthRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[AUTH] Failed to decode telegram auth request: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(req.InitData) == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	botToken := strings.TrimSpace(os.Getenv("TELEGRAM_BOT_TOKEN"))
+	if botToken == "" {
+		log.Printf("[AUTH] Telegram auth failed: TELEGRAM_BOT_TOKEN is missing")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	params, err := validateTelegramInitData(req.InitData, botToken, 24*time.Hour)
+	if err != nil {
+		log.Printf("[AUTH] Telegram initData validation failed: %v", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	userRaw := params.Get("user")
+	if userRaw == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	var tu telegramUser
+	if err := json.Unmarshal([]byte(userRaw), &tu); err != nil || tu.ID == 0 {
+		log.Printf("[AUTH] Telegram user parse failed: %v", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	displayName := strings.TrimSpace(strings.Join([]string{tu.FirstName, tu.LastName}, " "))
+	if displayName == "" && tu.Username != "" {
+		displayName = "@" + tu.Username
+	}
+	if displayName == "" {
+		displayName = fmt.Sprintf("tg:%d", tu.ID)
+	}
+
+	var avatarURL *string
+	if strings.TrimSpace(tu.PhotoURL) != "" {
+		u := strings.TrimSpace(tu.PhotoURL)
+		avatarURL = &u
+	}
+
+	existingUser, err := s.repo.GetByTelegramID(r.Context(), tu.ID)
+	if err != nil && err != ErrNotFound {
+		log.Printf("[AUTH] Telegram GetByTelegramID error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	var u *usergen.User
+	if existingUser != nil {
+		u = existingUser
+		u.DisplayName = displayName
+		u.AvatarUrl = avatarURL
+	} else {
+		u = &usergen.User{
+			Id:          uuid.New(),
+			DisplayName: displayName,
+			AvatarUrl:   avatarURL,
+		}
+	}
+
+	if err := s.repo.UpsertWithTelegramID(r.Context(), u, tu.ID); err != nil {
+		log.Printf("[AUTH] Telegram UpsertWithTelegramID failed: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	tok, exp := sign(u.Id.String())
+	resp := usergen.AuthResponse{AccessToken: tok, ExpiresIn: exp, User: *u}
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
 func (s *server) GetUsersMe(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseBearer(r)
 	if !ok {
@@ -221,6 +328,64 @@ func (s *server) PutUsersMe(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("[USER] Updated profile for user: %s", u.DisplayName)
 	_ = json.NewEncoder(w).Encode(u)
+}
+
+func validateTelegramInitData(initData string, botToken string, maxAge time.Duration) (url.Values, error) {
+	params, err := url.ParseQuery(initData)
+	if err != nil {
+		return nil, err
+	}
+
+	hash := params.Get("hash")
+	if hash == "" {
+		return nil, fmt.Errorf("missing hash")
+	}
+
+	if maxAge > 0 {
+		authDateStr := params.Get("auth_date")
+		if authDateStr == "" {
+			return nil, fmt.Errorf("missing auth_date")
+		}
+		sec, err := strconv.ParseInt(authDateStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("bad auth_date")
+		}
+		authTime := time.Unix(sec, 0)
+		if time.Since(authTime) > maxAge {
+			return nil, fmt.Errorf("auth_date expired")
+		}
+	}
+
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		if k == "hash" {
+			continue
+		}
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var b strings.Builder
+	for i, k := range keys {
+		if i > 0 {
+			b.WriteString("\n")
+		}
+		b.WriteString(k)
+		b.WriteString("=")
+		b.WriteString(params.Get(k))
+	}
+	dataCheckString := b.String()
+
+	secret := sha256.Sum256([]byte(botToken))
+	mac := hmac.New(sha256.New, secret[:])
+	mac.Write([]byte(dataCheckString))
+	sum := mac.Sum(nil)
+
+	expected := hex.EncodeToString(sum)
+	if subtle.ConstantTimeCompare([]byte(expected), []byte(hash)) != 1 {
+		return nil, fmt.Errorf("bad signature")
+	}
+	return params, nil
 }
 
 // PostAuthValidate validates a JWT token and returns user information (internal endpoint)

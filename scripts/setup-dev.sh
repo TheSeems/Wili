@@ -66,7 +66,7 @@ fi
 cat > backend/services/user/.env << 'EOF'
 DATABASE_URL=postgres://wili:wili_dev_password@localhost:5432/wili_dev?sslmode=disable
 
-JWT_SIGNING_KEY=dev_jwt_signing_key_change_in_production
+JWT_SECRET=dev_jwt_signing_key_change_in_production
 JWT_EXPIRY_HOURS=24
 
 YANDEX_CLIENT_ID=your_yandex_client_id_here
