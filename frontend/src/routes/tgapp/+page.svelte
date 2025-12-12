@@ -160,6 +160,9 @@
     if (tg) {
       tg.ready?.();
       tg.expand?.();
+      tg.setHeaderColor?.("bg_color");
+      tg.setBackgroundColor?.("bg_color");
+      tg.setBottomBarColor?.("bg_color");
       const user = tg.initDataUnsafe?.user;
       setDefaultNameFromUser(user);
 

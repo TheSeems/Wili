@@ -91,15 +91,16 @@ type answerInlineQueryRequest struct {
 }
 
 type config struct {
-	botToken        string
-	apiBaseURL      string
-	webAppURL       string
-	webFallback     string
-	miniAppBot      string
-	miniAppName     string
-	bindAddr        string
-	webhookPath     string
-	webhookToken    string
+	botToken     string
+	apiBaseURL   string
+	webAppURL    string
+	webFallback  string
+	miniAppBot   string
+	miniAppName  string
+	miniAppMode  string
+	bindAddr     string
+	webhookPath  string
+	webhookToken string
 }
 
 func mustEnv(key string) string {
@@ -118,6 +119,7 @@ func loadConfig() config {
 		webFallback:  strings.TrimRight(mustEnv("WISHES_WEB_URL"), "/"),
 		miniAppBot:   strings.TrimSpace(os.Getenv("TELEGRAM_MINIAPP_BOT_USERNAME")),
 		miniAppName:  strings.TrimSpace(os.Getenv("TELEGRAM_MINIAPP_NAME")),
+		miniAppMode:  strings.TrimSpace(os.Getenv("TELEGRAM_MINIAPP_MODE")),
 		bindAddr:     envOrDefault("BIND_ADDR", ":8080"),
 		webhookPath:  envOrDefault("WEBHOOK_PATH", "webhook"),
 		webhookToken: envOrDefault("WEBHOOK_SECRET_TOKEN", ""),
@@ -125,8 +127,16 @@ func loadConfig() config {
 }
 
 func (b *bot) miniAppDeepLink(listID string) string {
-	if b.cfg.miniAppBot != "" && b.cfg.miniAppName != "" {
-		return fmt.Sprintf("https://t.me/%s/%s?startapp=list_%s", b.cfg.miniAppBot, b.cfg.miniAppName, listID)
+	if b.cfg.miniAppBot != "" {
+		base := fmt.Sprintf("https://t.me/%s", b.cfg.miniAppBot)
+		if b.cfg.miniAppName != "" {
+			base = fmt.Sprintf("%s/%s", base, b.cfg.miniAppName)
+		}
+		url := fmt.Sprintf("%s?startapp=list_%s", base, listID)
+		if b.cfg.miniAppMode != "" {
+			url = fmt.Sprintf("%s&mode=%s", url, b.cfg.miniAppMode)
+		}
+		return url
 	}
 	return fmt.Sprintf("%s?start=list_%s", b.cfg.webAppURL, listID)
 }
@@ -219,6 +229,8 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 		return nil
 	}
 
+	log.Printf("inline query: from=%d id=%s q=%q", q.From.ID, q.ID, q.Query)
+
 	listID := parseInlineQueryListID(q.Query)
 	if listID == "" {
 		help := map[string]interface{}{
@@ -253,6 +265,7 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 
 	webAppURL := b.miniAppDeepLink(listID)
 	fallbackURL := fmt.Sprintf("%s/wishlists/%s", b.cfg.webFallback, listID)
+	log.Printf("inline query resolved: id=%s list=%s url=%s", q.ID, listID, webAppURL)
 
 	description := "Посмотрите список подарков и забронируйте то, что хотите подарить."
 	messageText := fmt.Sprintf("*«%s»*\n%s\n\n%s\n\nМожно открыть по кнопке ниже или в [web](%s)", wl.Title, status, description, fallbackURL)
@@ -309,6 +322,7 @@ func (b *bot) answerInlineQuery(ctx context.Context, inlineQueryID string, resul
 		bb, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("telegram answerInlineQuery status %d body=%s", resp.StatusCode, strings.TrimSpace(string(bb)))
 	}
+	log.Printf("inline query answered: id=%s results=%d", inlineQueryID, len(results))
 	return nil
 }
 

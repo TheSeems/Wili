@@ -9,7 +9,7 @@ data:
   WEBHOOK_PATH: "webhook"
   TELEGRAM_WEBAPP_URL: "https://tg.wili.me/tgapp"
   TELEGRAM_MINIAPP_BOT_USERNAME: "wiliwishbot"
-  TELEGRAM_MINIAPP_NAME: "tgapp"
+  TELEGRAM_MINIAPP_MODE: "fullscreen"
   WISHLIST_API_BASE_URL: "https://api.wili.me/wishlists"
   WISHES_WEB_URL: "https://wili.me"
 
@@ -66,6 +66,16 @@ spec:
             configMapKeyRef:
               name: telegram-bot-config
               key: TELEGRAM_WEBAPP_URL
+        - name: TELEGRAM_MINIAPP_BOT_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: telegram-bot-config
+              key: TELEGRAM_MINIAPP_BOT_USERNAME
+        - name: TELEGRAM_MINIAPP_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: telegram-bot-config
+              key: TELEGRAM_MINIAPP_MODE
         - name: WISHLIST_API_BASE_URL
           valueFrom:
             configMapKeyRef:
