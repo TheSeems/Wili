@@ -797,7 +797,7 @@
                     </DropdownMenu.Root>
                   {:else if revealLevel === "status"}
                     {#if item.booking}
-                      <div class="rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
+                      <div class="p-1">
                         <div class="flex items-center justify-between">
                           <div class="flex items-center gap-2 text-green-700 dark:text-green-300">
                             <BookOpenIcon class="h-4 w-4" />
@@ -828,7 +828,7 @@
                     {/if}
                   {:else if revealLevel === "details"}
                     {#if item.booking}
-                      <div class="rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
+                      <div class="p-1">
                         <div class="flex items-center gap-2 text-green-700 dark:text-green-300">
                           <BookOpenIcon class="h-4 w-4" />
                           <span class="text-sm font-medium">
@@ -860,7 +860,7 @@
                 {:else}
                   {#if item.booking}
                     {@const hasToken = hasBookingToken(wishlistId, item.id)}
-                    <div class="rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
+                    <div class="p-1">
                       <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2 text-green-700 dark:text-green-300">
                           <BookOpenIcon class="h-4 w-4" />

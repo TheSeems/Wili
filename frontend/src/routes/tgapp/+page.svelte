@@ -300,7 +300,7 @@
           </CardHeader>
           <CardContent class="flex flex-col gap-3">
             {#if item.booking}
-              <div class="flex flex-wrap items-center justify-between gap-2 rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-900/40 dark:bg-green-900/20 dark:text-green-200">
+              <div class="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-sm text-green-700 dark:text-green-300">
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center gap-2">
                     <CheckIcon class="h-4 w-4 shrink-0" />
