@@ -33,8 +33,11 @@ func signTelegramInitData(botToken string, params url.Values) string {
 	}
 	dataCheckString := b.String()
 
-	secret := sha256.Sum256([]byte(botToken))
-	mac := hmac.New(sha256.New, secret[:])
+	secretMac := hmac.New(sha256.New, []byte("WebAppData"))
+	secretMac.Write([]byte(botToken))
+	secretKey := secretMac.Sum(nil)
+
+	mac := hmac.New(sha256.New, secretKey)
 	mac.Write([]byte(dataCheckString))
 	return hex.EncodeToString(mac.Sum(nil))
 }

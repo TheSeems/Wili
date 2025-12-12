@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -78,10 +79,11 @@ type inlineKeyboardMarkup struct {
 }
 
 type sendMessageRequest struct {
-	ChatID      int64                 `json:"chat_id"`
-	Text        string                `json:"text"`
-	ParseMode   string                `json:"parse_mode,omitempty"`
-	ReplyMarkup *inlineKeyboardMarkup `json:"reply_markup,omitempty"`
+	ChatID                int64                 `json:"chat_id"`
+	Text                  string                `json:"text"`
+	ParseMode             string                `json:"parse_mode,omitempty"`
+	DisableWebPagePreview bool                  `json:"disable_web_page_preview,omitempty"`
+	ReplyMarkup           *inlineKeyboardMarkup `json:"reply_markup,omitempty"`
 }
 
 type answerInlineQueryRequest struct {
@@ -98,7 +100,6 @@ type config struct {
 	webFallback  string
 	miniAppBot   string
 	miniAppName  string
-	miniAppMode  string
 	bindAddr     string
 	webhookPath  string
 	webhookToken string
@@ -120,7 +121,6 @@ func loadConfig() config {
 		webFallback:  strings.TrimRight(mustEnv("WISHES_WEB_URL"), "/"),
 		miniAppBot:   strings.TrimSpace(os.Getenv("TELEGRAM_MINIAPP_BOT_USERNAME")),
 		miniAppName:  strings.TrimSpace(os.Getenv("TELEGRAM_MINIAPP_NAME")),
-		miniAppMode:  strings.TrimSpace(os.Getenv("TELEGRAM_MINIAPP_MODE")),
 		bindAddr:     envOrDefault("BIND_ADDR", ":8080"),
 		webhookPath:  envOrDefault("WEBHOOK_PATH", "webhook"),
 		webhookToken: envOrDefault("WEBHOOK_SECRET_TOKEN", ""),
@@ -133,11 +133,7 @@ func (b *bot) miniAppDeepLink(listID string) string {
 		if b.cfg.miniAppName != "" {
 			base = fmt.Sprintf("%s/%s", base, b.cfg.miniAppName)
 		}
-		url := fmt.Sprintf("%s?startapp=list_%s", base, listID)
-		if b.cfg.miniAppMode != "" {
-			url = fmt.Sprintf("%s&mode=%s", url, b.cfg.miniAppMode)
-		}
-		return url
+		return fmt.Sprintf("%s?startapp=list_%s", base, listID)
 	}
 	return fmt.Sprintf("%s?start=list_%s", b.cfg.webAppURL, listID)
 }
@@ -237,7 +233,7 @@ func (b *bot) sendMiniAppEntry(ctx context.Context, chatID int64) error {
 	msg := sendMessageRequest{
 		ChatID:    chatID,
 		Text:      text,
-		ParseMode: "Markdown",
+		ParseMode: "HTML",
 		ReplyMarkup: &inlineKeyboardMarkup{
 			InlineKeyboard: [][]inlineKeyboardButton{
 				{
@@ -268,6 +264,10 @@ func (b *bot) sendMiniAppEntry(ctx context.Context, chatID int64) error {
 		return fmt.Errorf("telegram sendMessage status %d", resp.StatusCode)
 	}
 	return nil
+}
+
+func esc(s string) string {
+	return html.EscapeString(s)
 }
 
 func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) error {
@@ -320,7 +320,7 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 	if wlDesc != "" {
 		baseDescription = fmt.Sprintf("%s\n\n%s", wlDesc, baseDescription)
 	}
-	messageText := fmt.Sprintf("*«%s»*\n\n%s\n\nЕсли не работает кнопка, можно открыть в [web](%s)", wl.Title, baseDescription, fallbackURL)
+	messageText := fmt.Sprintf("<b>«%s»</b>\n\n%s\n\nЕсли не работает кнопка, можно открыть в <a href=\"%s\">web</a>", esc(wl.Title), esc(baseDescription), esc(fallbackURL))
 
 	result := map[string]interface{}{
 		"type":        "article",
@@ -329,7 +329,7 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 		"description": "Открыть вишлист",
 		"input_message_content": map[string]interface{}{
 			"message_text":             messageText,
-			"parse_mode":               "Markdown",
+			"parse_mode":               "HTML",
 			"disable_web_page_preview": true,
 		},
 		"reply_markup": inlineKeyboardMarkup{
@@ -471,12 +471,13 @@ func (b *bot) sendWishlistPreview(ctx context.Context, chatID int64, listID stri
 	if wlDesc != "" {
 		baseDescription = fmt.Sprintf("%s\n\n%s", wlDesc, baseDescription)
 	}
-	text := fmt.Sprintf("*«%s»*\n\n%s\n\nМожно посмотреть по кнопке ниже или в [web](%s)", wl.Title, baseDescription, fallbackURL)
+	text := fmt.Sprintf("<b>«%s»</b>\n\n%s\n\nМожно посмотреть по кнопке ниже или в <a href=\"%s\">web</a>", esc(wl.Title), esc(baseDescription), esc(fallbackURL))
 
 	msg := sendMessageRequest{
-		ChatID:    chatID,
-		Text:      text,
-		ParseMode: "Markdown",
+		ChatID:                chatID,
+		Text:                  text,
+		ParseMode:             "HTML",
+		DisableWebPagePreview: true,
 		ReplyMarkup: &inlineKeyboardMarkup{
 			InlineKeyboard: [][]inlineKeyboardButton{
 				{
@@ -519,11 +520,12 @@ func (b *bot) sendSharePrompt(ctx context.Context, chatID int64, listID string) 
 	webAppURL := fmt.Sprintf("%s?start=list_%s", b.cfg.webAppURL, listID)
 	fallbackURL := fmt.Sprintf("%s/wishlists/%s", b.cfg.webFallback, listID)
 
-	text := fmt.Sprintf("*«%s»*\n\nНажмите кнопку ниже, выберите чат и отправьте сообщение с кнопкой.\n\nЕсли не работает — можно открыть в [web](%s).", wl.Title, fallbackURL)
+	text := fmt.Sprintf("<b>«%s»</b>\n\nНажмите кнопку ниже, выберите чат и отправьте сообщение с кнопкой.\n\nЕсли не работает — можно открыть в <a href=\"%s\">web</a>.", esc(wl.Title), esc(fallbackURL))
 	msg := sendMessageRequest{
-		ChatID:    chatID,
-		Text:      text,
-		ParseMode: "Markdown",
+		ChatID:                chatID,
+		Text:                  text,
+		ParseMode:             "HTML",
+		DisableWebPagePreview: true,
 		ReplyMarkup: &inlineKeyboardMarkup{
 			InlineKeyboard: [][]inlineKeyboardButton{
 				{

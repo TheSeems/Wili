@@ -552,9 +552,9 @@
         {/if}
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
         {#if telegramBotUsername && wishlist && !editing}
-          <Button variant="outline" onclick={shareWishlistToTelegram} class="gap-2">
+          <Button variant="outline" onclick={shareWishlistToTelegram} class="w-full gap-2 sm:w-auto">
             <SendIcon class="h-4 w-4" />
             <T key="wishlists.shareToTelegram" fallback="Share to Telegram" />
           </Button>
@@ -562,13 +562,13 @@
 
         <!-- Only show edit controls if user is authenticated and owns the wishlist -->
         {#if $authStore.token && $authStore.user && wishlist && wishlist.userId === $authStore.user.id && !editing}
-          <Button variant="outline" onclick={() => (editing = true)} class="gap-2">
+          <Button variant="outline" onclick={() => (editing = true)} class="w-full gap-2 sm:w-auto">
             <EditIcon class="h-4 w-4" />
             <T key="common.edit" fallback="Edit" />
           </Button>
           <DropdownMenu.Root>
             <DropdownMenu.Trigger>
-              <Button variant="ghost" size="sm" class="h-9 w-9 p-0">
+              <Button variant="ghost" size="sm" class="h-9 w-9 self-end p-0 sm:self-auto">
                 <MoreVerticalIcon class="h-4 w-4" />
               </Button>
             </DropdownMenu.Trigger>

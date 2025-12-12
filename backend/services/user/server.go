@@ -376,8 +376,11 @@ func validateTelegramInitData(initData string, botToken string, maxAge time.Dura
 	}
 	dataCheckString := b.String()
 
-	secret := sha256.Sum256([]byte(botToken))
-	mac := hmac.New(sha256.New, secret[:])
+	secretMac := hmac.New(sha256.New, []byte("WebAppData"))
+	secretMac.Write([]byte(botToken))
+	secretKey := secretMac.Sum(nil)
+
+	mac := hmac.New(sha256.New, secretKey)
 	mac.Write([]byte(dataCheckString))
 	sum := mac.Sum(nil)
 
