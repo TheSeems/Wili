@@ -1,7 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { onMount } from "svelte";
-  import { initApi, JUST_LOGGED_IN_KEY } from "$lib/auth";
+  import { exchangeTelegramInitData, initApi, JUST_LOGGED_IN_KEY } from "$lib/auth";
   import { authStore } from "$lib/stores/auth";
   import { makeAlert } from "$lib/stores/alerts";
   import CheckCircle2Icon from "@lucide/svelte/icons/check-circle-2";
@@ -45,6 +45,13 @@
     // Redirect to Yandex OAuth
     window.location.href = oauthUrl.toString();
   }
+
+  async function loginWithTelegram() {
+    const tg = (window as any)?.Telegram?.WebApp;
+    const initData = (tg?.initData as string | undefined) || "";
+    if (!initData) return;
+    await exchangeTelegramInitData(initData);
+  }
 </script>
 
 <section class="flex h-[80vh] flex-col items-center justify-center px-4">
@@ -74,9 +81,20 @@
         </Button>
       </div>
     {:else}
+      {#if browser && (window as any)?.Telegram?.WebApp?.initData}
+        <Button
+          onclick={loginWithTelegram}
+          class="mt-8 w-full border border-white/10 bg-black text-white hover:bg-black/90 sm:w-1/3"
+          aria-label="Login with Telegram"
+        >
+          <div class="flex items-center justify-center gap-2">
+            <T key="auth.loginWithTelegram" fallback="Login with Telegram" />
+          </div>
+        </Button>
+      {/if}
       <Button
         onclick={redirectToYandexAuth}
-        class="mt-8 w-full border border-white/10 bg-black text-white hover:bg-black/90 sm:w-1/3"
+        class="mt-4 w-full border border-white/10 bg-black text-white hover:bg-black/90 sm:w-1/3"
         aria-label="Login with Yandex"
       >
         <div class="flex items-center justify-center gap-2">

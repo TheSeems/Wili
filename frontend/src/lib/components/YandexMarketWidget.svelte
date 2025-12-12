@@ -101,7 +101,7 @@
 
 {#if widgetError || !productId}
   <!-- Fallback to UrlBadge if widget fails -->
-  <UrlBadge url={productUrl} {className} />
+  <UrlBadge url={productUrl} variant="inline" {className} />
 {:else}
   <!-- Always render container but show UrlBadge overlay while loading -->
   <div class="widget-wrapper">
@@ -115,7 +115,7 @@
     {#if !widgetLoaded}
       <!-- Show UrlBadge overlay while widget is loading -->
       <div class="loading-overlay">
-        <UrlBadge url={productUrl} {className} />
+        <UrlBadge url={productUrl} variant="inline" {className} />
       </div>
     {/if}
   </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/state";
+  import { env } from "$env/dynamic/public";
   import type { components } from "$lib/api/generated/wishlist-api";
   import { wishlistApi } from "$lib/api/wishlist-client";
   import { _ } from "svelte-i18n";
@@ -36,6 +37,7 @@
   let message = $state("");
   let defaultName: string | null = $state(null);
   let telegramAuthAttempted = $state(false);
+  const telegramBotUsername = env.PUBLIC_TELEGRAM_BOT_USERNAME;
 
   function parseListId(): string | null {
     if (typeof window === "undefined") return null;
@@ -165,8 +167,7 @@
   onMount(() => {
     listId = parseListId();
     if (!listId) {
-      error = $_("tgapp.badLink");
-      loading = false;
+      window.location.replace("https://wili.me");
       return;
     }
 
@@ -224,14 +225,16 @@
         ]);
         return;
       } catch (e) {
-        console.warn("Telegram switchInlineQuery failed, falling back", e);
+        console.warn("Telegram switchInlineQuery failed", e);
       }
     }
 
-    const shareUrl = `${window.location.origin}/wishlists/${wishlist.id}`;
-    const text = `Wishlist: ${wishlist.title || ""}`.trim();
-    const tgShare = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`;
-    window.open(tgShare, "_blank", "noopener");
+    if (tg?.openTelegramLink && telegramBotUsername) {
+      tg.openTelegramLink(`https://t.me/${telegramBotUsername}?start=share_${listId}`);
+      return;
+    }
+
+    showInfoAlert($_("wishlists.shareToTelegram"), undefined, "bottom-center");
   }
 </script>
 
