@@ -9,7 +9,6 @@
 
   let { productUrl, className = "" }: Props = $props();
 
-  // Extract product ID from Yandex Market URL
   let productId = $derived(
     (() => {
       try {
@@ -28,7 +27,6 @@
     })()
   );
 
-  // Generate unique container ID
   let containerId = $derived(
     `yandex-market-widget-${productId}-${Math.random().toString(36).substr(2, 9)}`
   );
@@ -42,7 +40,6 @@
       return;
     }
 
-    // Load Yandex Market widget script if not already loaded
     if (!document.querySelector('script[src*="aflt.market.yandex.ru"]')) {
       const script = document.createElement("script");
       script.src = "https://aflt.market.yandex.ru/widget/script/api";
@@ -50,7 +47,6 @@
       document.head.appendChild(script);
     }
 
-    // Initialize widget
     const initWidget = () => {
       try {
         (window as any).removeEventListener("YaMarketAffiliateLoad", initWidget);
@@ -64,9 +60,8 @@
           },
         });
 
-        // Check if widget loaded
         let checkCount = 0;
-        const maxChecks = 50; // 5 seconds max
+        const maxChecks = 50;
 
         const checkWidgetLoaded = () => {
           checkCount++;
@@ -100,12 +95,9 @@
 </script>
 
 {#if widgetError || !productId}
-  <!-- Fallback to UrlBadge if widget fails -->
   <UrlBadge url={productUrl} variant="inline" {className} />
 {:else}
-  <!-- Always render container but show UrlBadge overlay while loading -->
   <div class="widget-wrapper">
-    <!-- Widget container (always present for API) -->
     <div
       id={containerId}
       class="yandex-market-widget {className} py-4"
@@ -113,7 +105,6 @@
     ></div>
 
     {#if !widgetLoaded}
-      <!-- Show UrlBadge overlay while widget is loading -->
       <div class="loading-overlay">
         <UrlBadge url={productUrl} variant="inline" {className} />
       </div>
@@ -141,7 +132,7 @@
   :global(.yandex-market-widget) {
     border-radius: 0.5rem;
     overflow: hidden;
-    min-height: 60px; /* Ensure some height for overlay */
+    min-height: 60px;
   }
 
   :global(.yandex-market-widget iframe) {

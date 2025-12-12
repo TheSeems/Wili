@@ -21,7 +21,6 @@ function detectBrowserLocale(): string | null {
   return single;
 }
 
-// Initialize i18n with proper loading
 const initI18n = async () => {
   const stored = browser ? window.localStorage.getItem("locale") : null;
   const detected = detectBrowserLocale();
@@ -33,10 +32,8 @@ const initI18n = async () => {
   });
 };
 
-// Initialize immediately
 initI18n();
 
-// Save locale preference to localStorage when it changes
 if (browser) {
   locale.subscribe((value) => {
     if (value) {

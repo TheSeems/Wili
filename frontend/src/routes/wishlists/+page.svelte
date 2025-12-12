@@ -52,7 +52,6 @@
     const title = $_("wishlists.newWishlist");
     const description = $_("wishlists.newWishlistDescription");
 
-    // Basic validation (safety net for i18n values)
     const titleErrorKey = validation.getWishlistTitleErrorKey(title);
     if (titleErrorKey) {
       error = $_(titleErrorKey);

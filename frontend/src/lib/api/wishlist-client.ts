@@ -12,7 +12,6 @@ type BookItemRequest = components["schemas"]["BookItemRequest"];
 type ItemBooking = components["schemas"]["ItemBooking"];
 type BookItemResponse = components["schemas"]["BookItemResponse"];
 
-// Resolve base URL from SvelteKit public env or Vite env, with localhost fallback
 const PUBLIC_WISHLIST_API_BASE_URL =
   env.PUBLIC_WISHLIST_API_BASE_URL ??
   (import.meta as any).env?.VITE_WISHLIST_API_BASE_URL ??
@@ -70,7 +69,6 @@ export class WishlistApiClient {
     return JSON.parse(text);
   }
 
-  // Wishlist operations
   async getWishlists(token: string): Promise<{ wishlists: Wishlist[] }> {
     return this.request("", { method: "GET" }, token);
   }
@@ -105,7 +103,6 @@ export class WishlistApiClient {
     await this.request(`/${id}`, { method: "DELETE" }, token, false);
   }
 
-  // Wishlist item operations
   async addWishlistItem(
     wishlistId: string,
     data: CreateWishlistItemRequest,
@@ -141,17 +138,23 @@ export class WishlistApiClient {
     await this.request(`/${wishlistId}/items/${itemId}`, { method: "DELETE" }, token, false);
   }
 
-  async bookItem(wishlistId: string, itemId: string, data: BookItemRequest): Promise<BookItemResponse> {
-    return this.request(
-      `/${wishlistId}/items/${itemId}/book`,
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      }
-    );
+  async bookItem(
+    wishlistId: string,
+    itemId: string,
+    data: BookItemRequest
+  ): Promise<BookItemResponse> {
+    return this.request(`/${wishlistId}/items/${itemId}/book`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 
-  async unbookItemByOwner(wishlistId: string, itemId: string, bookingId: string, token: string): Promise<void> {
+  async unbookItemByOwner(
+    wishlistId: string,
+    itemId: string,
+    bookingId: string,
+    token: string
+  ): Promise<void> {
     await this.request(
       `/${wishlistId}/items/${itemId}/unbook?bookingId=${encodeURIComponent(bookingId)}`,
       { method: "DELETE" },
@@ -160,7 +163,11 @@ export class WishlistApiClient {
     );
   }
 
-  async unbookItemByToken(wishlistId: string, itemId: string, cancellationToken: string): Promise<void> {
+  async unbookItemByToken(
+    wishlistId: string,
+    itemId: string,
+    cancellationToken: string
+  ): Promise<void> {
     await this.request(
       `/${wishlistId}/items/${itemId}/unbook?cancellationToken=${encodeURIComponent(cancellationToken)}`,
       { method: "DELETE" },
@@ -170,5 +177,4 @@ export class WishlistApiClient {
   }
 }
 
-// Default client instance
 export const wishlistApi = new WishlistApiClient(PUBLIC_WISHLIST_API_BASE_URL);

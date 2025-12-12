@@ -27,7 +27,6 @@ type server struct {
 	repo UserRepo
 }
 
-// Yandex OAuth response structures
 type yandexTokenResponse struct {
 	AccessToken string `json:"access_token"`
 	TokenType   string `json:"token_type"`
@@ -391,7 +390,6 @@ func validateTelegramInitData(initData string, botToken string, maxAge time.Dura
 	return params, nil
 }
 
-// PostAuthValidate validates a JWT token and returns user information (internal endpoint)
 func (s *server) PostAuthValidate(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[VALIDATE] Token validation request from %s", r.RemoteAddr)
 
@@ -422,7 +420,7 @@ func (s *server) PostAuthValidate(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[VALIDATE] Invalid token: %v", err)
 		json.NewEncoder(w).Encode(validateResp{
 			Valid: false,
-			User:  usergen.User{}, // Empty user for invalid tokens
+			User:  usergen.User{},
 		})
 		return
 	}
@@ -525,7 +523,6 @@ func (s *server) exchangeYandexCode(code string, redirectURIFromClient string) (
 	return tokenResp.AccessToken, nil
 }
 
-// getYandexUserInfo retrieves user information using access token
 func (s *server) getYandexUserInfo(accessToken string) (*yandexUserInfo, error) {
 	req, err := http.NewRequest("GET", "https://login.yandex.ru/info", nil)
 	if err != nil {

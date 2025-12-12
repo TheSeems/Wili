@@ -32,7 +32,12 @@
   } from "@lucide/svelte";
   import { wishlistApi } from "$lib/api/wishlist-client";
   import type { components } from "$lib/api/generated/wishlist-api";
-  import { saveBookingToken, getBookingToken, removeBookingToken, hasBookingToken } from "$lib/utils/booking-storage";
+  import {
+    saveBookingToken,
+    getBookingToken,
+    removeBookingToken,
+    hasBookingToken,
+  } from "$lib/utils/booking-storage";
   import ExpandableText from "$lib/components/ExpandableText.svelte";
   import { showSuccessAlert, showInfoAlert } from "$lib/utils/alerts";
   import { _ } from "svelte-i18n";
@@ -57,7 +62,6 @@
     description: "",
   });
 
-  // New item form
   let addingItem = $state(false);
   let newItem = $state({
     name: "",
@@ -65,27 +69,23 @@
     type: "general" as const,
   });
 
-  // Item editing
   let editingItemId = $state<string | null>(null);
   let editItemForm = $state({
     name: "",
     description: "",
   });
 
-  // Booking
   let bookingItemId = $state<string | null>(null);
   let bookingForm = $state({
     bookerName: "",
     message: "",
   });
 
-  // Revealed bookings for owner (to preserve surprise)
   type RevealLevel = "none" | "status" | "details";
   let revealedBookings = $state<Map<string, RevealLevel>>(new Map());
 
   const wishlistId = $derived(page.params.id);
 
-  // SEO/OG derived values
   const defaultOgTitle = "Wishlist — Wili";
   const defaultOgDescription = "View this wishlist on Wili.";
   function summarize(text: string): string {
@@ -124,7 +124,6 @@
   async function saveWishlist() {
     if (!$authStore.token || !wishlistId || !wishlist) return;
 
-    // Client-side validation using generated constants
     const titleErrorKey = validation.getWishlistTitleErrorKey(editForm.title);
     if (titleErrorKey) {
       error = $_(titleErrorKey);
@@ -162,7 +161,6 @@
   async function addItem() {
     if (!$authStore.token || !wishlistId) return;
 
-    // Client-side validation using generated constants
     const nameErrorKey = validation.getItemNameErrorKey(newItem.name);
     if (nameErrorKey) {
       error = $_(nameErrorKey);
@@ -188,7 +186,6 @@
 
       await wishlistApi.addWishlistItem(wishlistId, itemData, $authStore.token);
 
-      // Reload wishlist to get updated items
       await loadWishlist();
       addingItem = false;
       newItem = { name: "", description: "", type: "general" };
@@ -204,7 +201,6 @@
 
     try {
       await wishlistApi.deleteWishlistItem(wishlistId, itemId, $authStore.token);
-      // Reload wishlist to get updated items
       await loadWishlist();
     } catch (err) {
       error = err instanceof Error ? err.message : $_("items.failedToDelete");
@@ -231,7 +227,6 @@
   async function saveItemEdit(itemId: string, currentItem: WishlistItem) {
     if (!$authStore.token || !wishlistId) return;
 
-    // Client-side validation using generated constants
     const nameErrorKey = validation.getItemNameErrorKey(editItemForm.name);
     if (nameErrorKey) {
       error = $_(nameErrorKey);
@@ -258,7 +253,6 @@
 
       await wishlistApi.updateWishlistItem(wishlistId, itemId, updateData, $authStore.token);
 
-      // Reload wishlist to get updated items
       await loadWishlist();
       cancelEditingItem();
     } catch (err) {
@@ -279,7 +273,6 @@
       await navigator.clipboard.writeText(shareUrl);
       showSuccessAlert($_("wishlists.shareLinkCopied"), undefined, "top-right");
     } catch (err) {
-      // Fallback for older browsers or when clipboard API fails
       console.error("Failed to copy to clipboard:", err);
       showInfoAlert($_("wishlists.shareLink"), shareUrl, "top-right");
     }
@@ -316,7 +309,6 @@
     window.open(tgShare, "_blank", "noopener");
   }
 
-  // Booking functions
   function startBooking(itemId: string) {
     bookingItemId = itemId;
     bookingForm = {
@@ -346,12 +338,8 @@
       saveBookingToken(wishlistId, bookingItemId, response.cancellationToken);
       await loadWishlist();
       cancelBooking();
-      
-      showSuccessAlert(
-        $_("items.bookedSuccessfully"),
-        undefined,
-        "top-right"
-      );
+
+      showSuccessAlert($_("items.bookedSuccessfully"), undefined, "top-right");
     } catch (err) {
       if (err instanceof Error && err.message.includes("already booked")) {
         error = $_("items.alreadyBooked");
@@ -367,11 +355,16 @@
     if (!confirm($_("items.confirmUnbook"))) return;
 
     try {
-      await wishlistApi.unbookItemByOwner(wishlistId, item.id, item.booking.bookingId, $authStore.token);
+      await wishlistApi.unbookItemByOwner(
+        wishlistId,
+        item.id,
+        item.booking.bookingId,
+        $authStore.token
+      );
       await loadWishlist();
       revealedBookings.delete(item.id);
       revealedBookings = new Map(revealedBookings);
-      
+
       showSuccessAlert($_("items.unbookedSuccessfully"), undefined, "top-right");
     } catch (err) {
       error = err instanceof Error ? err.message : $_("items.failedToUnbook");
@@ -381,7 +374,7 @@
 
   async function unbookItemByToken(item: WishlistItem) {
     if (!wishlistId) return;
-    
+
     const cancellationToken = getBookingToken(wishlistId, item.id);
     if (!cancellationToken) {
       error = $_("items.noCancellationToken");
@@ -394,7 +387,7 @@
       await wishlistApi.unbookItemByToken(wishlistId, item.id, cancellationToken);
       removeBookingToken(wishlistId, item.id);
       await loadWishlist();
-      
+
       showSuccessAlert($_("items.bookingCancelled"), undefined, "top-right");
     } catch (err) {
       error = err instanceof Error ? err.message : $_("items.failedToCancelBooking");
@@ -418,7 +411,7 @@
 
   function revealAllBookings(level: RevealLevel) {
     if (!wishlist?.items) return;
-    wishlist.items.forEach(item => {
+    wishlist.items.forEach((item) => {
       revealedBookings.set(item.id, level);
     });
     revealedBookings = new Map(revealedBookings);
@@ -444,7 +437,6 @@
 </svelte:head>
 
 <div class="container mx-auto px-4 py-8">
-  <!-- Back button -->
   {#if $authStore.token}
     <Button variant="ghost" onclick={() => goto("/wishlists")} class="mb-6 gap-2">
       <ArrowLeftIcon class="h-4 w-4" />
@@ -468,10 +460,8 @@
       </CardContent>
     </Card>
   {:else if wishlist}
-    <!-- Wishlist Header -->
     <div class="mb-8 flex items-start justify-between">
       <div class="flex-1">
-        <!-- Show owner info for anonymous viewers -->
         {#if !$authStore.token}
           <div class="bg-muted mb-6 rounded-lg p-3">
             <p class="text-muted-foreground text-sm">
@@ -554,13 +544,16 @@
 
       <div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
         {#if telegramBotUsername && wishlist && !editing}
-          <Button variant="outline" onclick={shareWishlistToTelegram} class="w-full gap-2 sm:w-auto">
+          <Button
+            variant="outline"
+            onclick={shareWishlistToTelegram}
+            class="w-full gap-2 sm:w-auto"
+          >
             <SendIcon class="h-4 w-4" />
             <T key="wishlists.shareToTelegram" fallback="Share to Telegram" />
           </Button>
         {/if}
 
-        <!-- Only show edit controls if user is authenticated and owns the wishlist -->
         {#if $authStore.token && $authStore.user && wishlist && wishlist.userId === $authStore.user.id && !editing}
           <Button variant="outline" onclick={() => (editing = true)} class="w-full gap-2 sm:w-auto">
             <EditIcon class="h-4 w-4" />
@@ -602,7 +595,6 @@
 
     <Separator class="mb-8" />
 
-    <!-- Add Item Section - Only show if user owns the wishlist -->
     {#if $authStore.token && $authStore.user && wishlist && wishlist.userId === $authStore.user.id}
       {#if addingItem}
         <Card class="mb-6">
@@ -664,13 +656,11 @@
       {/if}
     {/if}
 
-    <!-- Items List -->
     {#if wishlist.items && wishlist.items.length > 0}
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {#each wishlist.items as item}
           <Card class="min-h-[100px] transition-shadow hover:shadow-md">
             {#if editingItemId === item.id}
-              <!-- Edit mode -->
               <CardHeader>
                 <CardTitle><T key="wishlists.editItem" fallback="Edit Item" /></CardTitle>
               </CardHeader>
@@ -723,7 +713,6 @@
                 </div>
               </CardContent>
             {:else}
-              <!-- Display mode -->
               <CardHeader class="relative">
                 <CardTitle class="line-clamp-2 pr-10"
                   >{item.data?.name || $_("wishlists.untitledItem")}</CardTitle
@@ -740,9 +729,8 @@
                     />
                   </CardDescription>
                 {/if}
-                <!-- Actions menu in top-right corner -->
                 {#if $authStore.token && $authStore.user && wishlist && wishlist.userId === $authStore.user.id}
-                  <div class="absolute top-4 right-4">
+                  <div class="absolute right-4 top-4">
                     <DropdownMenu.Root>
                       <DropdownMenu.Trigger>
                         <Button variant="ghost" size="sm" class="h-8 w-8 p-0">
@@ -775,14 +763,19 @@
                   </div>
                 {/if}
               </CardHeader>
-              
-              <!-- Booking information and actions -->
+
               <CardContent class="pt-0">
                 {#if $authStore.token && $authStore.user && wishlist && wishlist.userId === $authStore.user.id}
                   {@const revealLevel = getRevealLevel(item.id)}
                   {#if revealLevel === "none"}
                     <DropdownMenu.Root>
-                      <DropdownMenu.Trigger class={buttonVariants({ variant: "outline", size: "sm", class: "w-full gap-2" })}>
+                      <DropdownMenu.Trigger
+                        class={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                          class: "w-full gap-2",
+                        })}
+                      >
                         <EyeIcon class="h-4 w-4" />
                         <T key="items.revealBooking" fallback="Reveal booking info" />
                       </DropdownMenu.Trigger>
@@ -857,57 +850,55 @@
                       </div>
                     {/if}
                   {/if}
-                {:else}
-                  {#if item.booking}
-                    {@const hasToken = hasBookingToken(wishlistId, item.id)}
-                    <div class="p-1">
-                      <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2 text-green-700 dark:text-green-300">
-                          <BookOpenIcon class="h-4 w-4" />
-                          <span class="text-sm font-medium">
-                            {#if hasToken}
-                              <T key="items.youBookedThis" fallback="You booked this" />
-                            {:else}
-                              <T key="items.bookedBy" fallback="Booked by" />
-                              {item.booking.bookerName || $_("items.anonymous")}
-                            {/if}
-                          </span>
-                        </div>
-                        {#if hasToken}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onclick={() => unbookItemByToken(item)}
-                            class="h-7 gap-1 text-xs text-orange-600 hover:text-orange-700"
-                          >
-                            <XIcon class="h-3 w-3" />
-                            <T key="items.cancelMyBooking" fallback="Cancel" />
-                          </Button>
-                        {/if}
-                      </div>
-                      {#if item.booking.message}
-                        <p class="mt-1 text-sm text-green-600 dark:text-green-400">
-                          "{item.booking.message}"
-                        </p>
-                      {/if}
-                      <p class="mt-1 text-xs text-green-600 dark:text-green-400">
-                        <T key="items.bookedOn" fallback="Booked on" />
-                        {new Date(item.booking.bookedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  {:else}
-                    <div class="flex gap-2">
-                      <Button
-                        onclick={() => startBooking(item.id)}
-                        variant="outline"
-                        size="sm"
-                        class="flex-1 gap-2"
-                      >
+                {:else if item.booking}
+                  {@const hasToken = hasBookingToken(wishlistId, item.id)}
+                  <div class="p-1">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2 text-green-700 dark:text-green-300">
                         <BookOpenIcon class="h-4 w-4" />
-                        <T key="items.bookItem" fallback="Book Item" />
-                      </Button>
+                        <span class="text-sm font-medium">
+                          {#if hasToken}
+                            <T key="items.youBookedThis" fallback="You booked this" />
+                          {:else}
+                            <T key="items.bookedBy" fallback="Booked by" />
+                            {item.booking.bookerName || $_("items.anonymous")}
+                          {/if}
+                        </span>
+                      </div>
+                      {#if hasToken}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onclick={() => unbookItemByToken(item)}
+                          class="h-7 gap-1 text-xs text-orange-600 hover:text-orange-700"
+                        >
+                          <XIcon class="h-3 w-3" />
+                          <T key="items.cancelMyBooking" fallback="Cancel" />
+                        </Button>
+                      {/if}
                     </div>
-                  {/if}
+                    {#if item.booking.message}
+                      <p class="mt-1 text-sm text-green-600 dark:text-green-400">
+                        "{item.booking.message}"
+                      </p>
+                    {/if}
+                    <p class="mt-1 text-xs text-green-600 dark:text-green-400">
+                      <T key="items.bookedOn" fallback="Booked on" />
+                      {new Date(item.booking.bookedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                {:else}
+                  <div class="flex gap-2">
+                    <Button
+                      onclick={() => startBooking(item.id)}
+                      variant="outline"
+                      size="sm"
+                      class="flex-1 gap-2"
+                    >
+                      <BookOpenIcon class="h-4 w-4" />
+                      <T key="items.bookItem" fallback="Book Item" />
+                    </Button>
+                  </div>
                 {/if}
               </CardContent>
             {/if}
@@ -935,10 +926,9 @@
   {/if}
 </div>
 
-<!-- Booking Modal -->
 {#if bookingItemId}
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    <Card class="w-full max-w-md mx-4">
+    <Card class="mx-4 w-full max-w-md">
       <CardHeader>
         <CardTitle class="flex items-center gap-2">
           <BookOpenIcon class="h-5 w-5" />
@@ -958,11 +948,11 @@
             placeholder={$_("items.yourNamePlaceholder")}
             class="mt-1"
           />
-          <p class="text-muted-foreground text-xs mt-1">
+          <p class="text-muted-foreground mt-1 text-xs">
             <T key="items.nameOptional" fallback="Leave empty for anonymous booking" />
           </p>
         </div>
-        
+
         <div>
           <label class="text-sm font-medium">
             <T key="items.message" fallback="Message (Optional)" />
@@ -973,16 +963,13 @@
             rows={3}
             class="mt-1"
           />
-          <p class="text-muted-foreground text-xs mt-1">
+          <p class="text-muted-foreground mt-1 text-xs">
             <T key="items.messageOptional" fallback="Add a message for the wishlist owner" />
           </p>
         </div>
-        
+
         <div class="flex gap-2 pt-2">
-          <Button
-            onclick={bookItem}
-            class="flex-1 gap-2"
-          >
+          <Button onclick={bookItem} class="flex-1 gap-2">
             <BookOpenIcon class="h-4 w-4" />
             <T key="items.bookItem" fallback="Book Item" />
           </Button>

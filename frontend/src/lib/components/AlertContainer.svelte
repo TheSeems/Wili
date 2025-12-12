@@ -1,7 +1,7 @@
 <script lang="ts">
   import { alertsStore, removeAlert, type AlertItem } from "$lib/stores/alerts";
   import * as Alert from "$lib/components/ui/alert/index.js";
-  import { fly } from "svelte/transition";
+  import { fly, scale } from "svelte/transition";
   import XIcon from "@lucide/svelte/icons/x";
 
   $: alerts = $alertsStore;
@@ -46,7 +46,7 @@
       case "bottom-left":
         return { x: -300, duration: 300 };
       case "center":
-        return { y: -20, duration: 300 }; // Fallback for center
+        return { y: -20, duration: 300 };
       default:
         return { y: -20, duration: 300 };
     }
@@ -60,7 +60,6 @@
     return position === "center";
   }
 
-  // Group alerts by position
   $: alertsByPosition = alerts.reduce(
     (acc, alert) => {
       const position = alert.position || "center";
@@ -77,29 +76,54 @@
     class="{getPositionClasses(position)} pointer-events-none flex w-full max-w-md flex-col gap-2"
   >
     {#each positionAlerts as alert (alert.id)}
-      <div
-        in:fly|global={{ y: -50, duration: 400 }}
-        out:fly|global={{ y: -50, duration: 200 }}
-        class="pointer-events-auto relative"
-      >
-        <Alert.Root variant={alert.variant || "default"} class="pr-8">
-          {#if alert.icon}
-            <svelte:component this={alert.icon} class="h-4 w-4" />
-          {/if}
-          <Alert.Title>{alert.title}</Alert.Title>
-          {#if alert.description}
-            <Alert.Description>{alert.description}</Alert.Description>
-          {/if}
+      {#if isScalePosition(position)}
+        <div
+          in:scale|global={getScaleTransition(position)}
+          out:scale|global={getScaleTransition(position)}
+          class="pointer-events-auto relative"
+        >
+          <Alert.Root variant={alert.variant || "default"} class="pr-8">
+            {#if alert.icon}
+              <svelte:component this={alert.icon} class="h-4 w-4" />
+            {/if}
+            <Alert.Title>{alert.title}</Alert.Title>
+            {#if alert.description}
+              <Alert.Description>{alert.description}</Alert.Description>
+            {/if}
 
-          <!-- Dismiss button -->
-          <button
-            onclick={() => dismissAlert(alert.id)}
-            class="absolute top-2 right-2 rounded-sm p-1 opacity-70 transition-opacity hover:opacity-100"
-          >
-            <XIcon class="h-3 w-3" />
-          </button>
-        </Alert.Root>
-      </div>
+            <!-- Dismiss button -->
+            <button
+              onclick={() => dismissAlert(alert.id)}
+              class="absolute right-2 top-2 rounded-sm p-1 opacity-70 transition-opacity hover:opacity-100"
+            >
+              <XIcon class="h-3 w-3" />
+            </button>
+          </Alert.Root>
+        </div>
+      {:else}
+        <div
+          in:fly|global={getFlyTransition(position)}
+          out:fly|global={getFlyTransition(position)}
+          class="pointer-events-auto relative"
+        >
+          <Alert.Root variant={alert.variant || "default"} class="pr-8">
+            {#if alert.icon}
+              <svelte:component this={alert.icon} class="h-4 w-4" />
+            {/if}
+            <Alert.Title>{alert.title}</Alert.Title>
+            {#if alert.description}
+              <Alert.Description>{alert.description}</Alert.Description>
+            {/if}
+
+            <button
+              onclick={() => dismissAlert(alert.id)}
+              class="absolute right-2 top-2 rounded-sm p-1 opacity-70 transition-opacity hover:opacity-100"
+            >
+              <XIcon class="h-3 w-3" />
+            </button>
+          </Alert.Root>
+        </div>
+      {/if}
     {/each}
   </div>
 {/each}

@@ -28,15 +28,12 @@
     }
   });
 
-  // Wait for i18n to be ready
   $effect(() => {
     if (browser) {
-      // Ready when not loading and locale is set
       i18nReady = !$isLoading && $locale !== null && $locale !== undefined;
     }
   });
 
-  // Basic SEO defaults
   const defaultTitle = "Wili — Create and share wishlists";
   const defaultDescription = "Wili lets you create, manage, and share wishlists effortlessly.";
   const ogImage = "/android-chrome-512x512.png";
@@ -66,7 +63,6 @@
   <meta name="twitter:image" content={ogImage} />
   <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 
-  <!-- JSON-LD: WebSite -->
   {@html `<script type="application/ld+json">${JSON.stringify({
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -136,7 +132,6 @@
     </footer>
   {/if}
 {:else}
-  <!-- Loading state while i18n initializes -->
   <div class="flex min-h-screen items-center justify-center">
     <div class="animate-pulse">Loading...</div>
   </div>

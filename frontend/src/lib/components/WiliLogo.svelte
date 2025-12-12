@@ -2,17 +2,11 @@
   interface Props {
     variant?: "auto" | "light" | "dark" | "colored";
     className?: string;
-    opticalAdjust?: boolean; // legacy CSS-based adjust; prefer intrinsic SVG shift
+    opticalAdjust?: boolean;
   }
 
-  let { variant = "auto", className = "", opticalAdjust = false }: Props = $props();
+  let { variant = "auto", className = "" }: Props = $props();
 
-  const adjustClass = opticalAdjust
-    ? "-translate-x-[2px] sm:-translate-x-[3px] md:-translate-x-[4px]"
-    : "";
-  const shiftX = -2; // Intrinsic art shift to remove left-side padding inside viewBox
-
-  // Compute color class for different variants
   const colorClass = $derived(
     variant === "dark"
       ? "text-white"
@@ -22,7 +16,6 @@
   );
 </script>
 
-<!-- Auto variant: toggle between light/dark via media class -->
 <div style="display:inline-block; line-height:0;">
   <svg viewBox="20 0 300 108.838" class={`${colorClass} ${className}`} aria-label="Wili logo">
     <path

@@ -6,39 +6,31 @@
   import { onDestroy } from "svelte";
 
   export let content: string = "";
-  // If provided (>0), overrides responsive calculation
-  export let maxHeight: number | null = null; // pixels
-  // Enable responsive calculation of collapsed height based on viewport
+  export let maxHeight: number | null = null;
   export let useResponsive: boolean = true;
-  // Fractions of viewport height used when responsive is enabled
-  export let mobileFraction: number = 0.45; // ~45% on mobile (one card per row)
-  export let desktopFraction: number = 0.30; // ~30% on desktop (multi-column)
-  // Clamp bounds to avoid extremes
+  export let mobileFraction: number = 0.45;
+  export let desktopFraction: number = 0.3;
   export let minMaxHeight: number = 180;
   export let maxMaxHeight: number = 520;
   export let showMarkdown: boolean = true;
   export let className: string = "";
   export let allowYandexMarket: boolean = true;
-  // If content overflows only slightly, show it fully instead of forcing "Show more"
-  export let smallOverflowThreshold: number = 28; // px
+  export let smallOverflowThreshold: number = 28;
 
   let expanded = false;
   let contentElement: HTMLElement;
   let needsExpansion = false;
-  let measuredHeight = 0;
   let computedResponsiveMaxHeight = 220;
   let effectiveMaxHeight = 220;
   let appliedMaxHeight = 220;
 
-  // Check if content needs expansion after it's rendered
   $: if (contentElement && content) {
     checkNeedsExpansion();
   }
 
-  // Recompute responsive max height on mount and when viewport changes
   function recomputeResponsiveMaxHeight() {
     if (!browser) return;
-    const isDesktop = window.matchMedia("(min-width: 768px)").matches; // align with Tailwind md
+    const isDesktop = window.matchMedia("(min-width: 768px)").matches;
     const fraction = isDesktop ? desktopFraction : mobileFraction;
     const suggested = Math.round(window.innerHeight * fraction);
     const clamped = Math.max(minMaxHeight, Math.min(maxMaxHeight, suggested));
@@ -56,19 +48,17 @@
     }
   });
 
-  // Determine effective max height (explicit > responsive > default)
   $: effectiveMaxHeight =
     typeof maxHeight === "number" && maxHeight > 0
       ? maxHeight
       : useResponsive
-      ? computedResponsiveMaxHeight
-      : 220;
+        ? computedResponsiveMaxHeight
+        : 220;
   $: appliedMaxHeight = effectiveMaxHeight;
 
   function checkNeedsExpansion() {
     if (!contentElement) return;
 
-    // Create a temporary clone to measure the full height without affecting the DOM
     const clone = contentElement.cloneNode(true) as HTMLElement;
     clone.style.position = "absolute";
     clone.style.visibility = "hidden";
@@ -79,11 +69,8 @@
     const fullHeight = clone.scrollHeight;
     document.body.removeChild(clone);
 
-    measuredHeight = fullHeight;
     const overflow = fullHeight - effectiveMaxHeight;
-    // Add a small buffer (5px) to avoid toggling on exact equals
     if (overflow > 5) {
-      // If overflow is small, just show fully without a toggle
       if (overflow <= smallOverflowThreshold) {
         needsExpansion = false;
         appliedMaxHeight = fullHeight;

@@ -10,7 +10,6 @@
 
   let { content = "", allowYandexMarket = true }: Props = $props();
 
-  // Check if URL is a Yandex Market product link
   function isYandexMarketUrl(url: string): boolean {
     try {
       const urlObj = new URL(url);
@@ -20,34 +19,25 @@
     }
   }
 
-  // Extract all standalone URLs for component rendering
   let standaloneUrls = $derived(
     (() => {
       if (!content) return [];
 
-      const urls: Array<{ url: string; isYandexMarket: boolean; id: string }> = [];
-
-      // First, let's extract URLs that are NOT part of markdown syntax
-      const urlRegex = /https?:\/\/[^\s\)]+/g;
+      const urlRegex = /https?:\/\/[^\s)]+/g;
       let match;
       const matches: string[] = [];
 
-      // Find all URLs and their positions
       while ((match = urlRegex.exec(content)) !== null) {
         const url = match[0];
         const startIndex = match.index;
         const endIndex = startIndex + url.length;
 
-        // Check if this URL is part of markdown image syntax ![alt](url)
-        const beforeUrl = content.substring(0, startIndex);
         const afterUrl = content.substring(endIndex);
 
-        // Skip if it's an image URL
         if (/\.(jpg|jpeg|png|gif|webp|svg|ico|bmp|tiff)$/i.test(url)) {
           continue;
         }
 
-        // Skip if it's part of markdown image syntax ![alt](url)
         if (afterUrl.startsWith(")")) {
           const beforeUrl = content.substring(0, startIndex);
           if (
@@ -58,7 +48,6 @@
           }
         }
 
-        // Skip if it's part of markdown link syntax [text](url)
         if (afterUrl.startsWith(")")) {
           const beforeUrl = content.substring(0, startIndex);
           if (beforeUrl.includes("[") && beforeUrl.lastIndexOf("[") > beforeUrl.lastIndexOf("](")) {
@@ -66,7 +55,6 @@
           }
         }
 
-        // Skip if it's inside parentheses but not part of markdown syntax
         if (afterUrl.startsWith(")")) {
           const beforeUrl = content.substring(0, startIndex);
           if (beforeUrl.includes("(") && beforeUrl.lastIndexOf("(") > beforeUrl.lastIndexOf(")")) {
@@ -74,7 +62,6 @@
           }
         }
 
-        // Only add URLs that are standalone (not part of any markdown syntax)
         matches.push(url);
       }
 
@@ -86,13 +73,11 @@
     })()
   );
 
-  // Configure marked for security and styling
   marked.setOptions({
-    breaks: true, // Convert line breaks to <br>
-    gfm: true, // Enable GitHub Flavored Markdown
+    breaks: true,
+    gfm: true,
   });
 
-  // Custom renderer to make all links open in new tabs and create placeholders for standalone URLs
   const renderer = new marked.Renderer();
   renderer.link = function (token) {
     const href = token.href;
@@ -100,17 +85,14 @@
     const text = token.text;
     const titleAttr = title ? ` title="${title}"` : "";
 
-    // If the link text is the same as the URL (or just domain), style it as a badge
     const isStandaloneUrl =
       text === href || text.replace(/^https?:\/\//, "") === href.replace(/^https?:\/\//, "");
 
     if (isStandaloneUrl) {
-      // Generate unique ID for the placeholder
       const urlId = `url-${Math.random().toString(36).substr(2, 9)}`;
       return `<span class="url-placeholder" data-url="${href}" data-url-id="${urlId}"></span>`;
     }
 
-    // Otherwise, render as a normal link
     return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
   };
 
@@ -125,7 +107,6 @@
   <div class="markdown-content">
     {@html htmlContent}
 
-    <!-- Render URL badges and Yandex Market widgets for detected URLs -->
     {#each standaloneUrls as urlInfo}
       {#if urlInfo.isYandexMarket && allowYandexMarket}
         <YandexMarketWidget productUrl={urlInfo.url} />
@@ -264,8 +245,7 @@
     border-top-color: rgb(71 85 105);
   }
 
-  /* URL Placeholder */
   :global(.markdown-content .url-placeholder) {
-    display: none; /* Hide placeholder as we render components separately */
+    display: none;
   }
 </style>

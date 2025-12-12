@@ -30,10 +30,8 @@ export function makeAlert(alert: Omit<AlertItem, "id">) {
     ...alert,
   };
 
-  // Add alert to store
   alertsStore.update((alerts) => [...alerts, alertItem]);
 
-  // Auto-remove after duration
   setTimeout(() => {
     removeAlert(id);
   }, duration);

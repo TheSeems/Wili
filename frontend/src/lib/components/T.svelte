@@ -9,7 +9,6 @@
 
   let { key, fallback, values }: Props = $props();
 
-  // Auto-generate fallback from key if not provided
   let autoFallback = $derived(
     fallback ||
       key
@@ -20,7 +19,6 @@
       key
   );
 
-  // Get translated text with fallback
   let text = $derived(
     $isLoading ? autoFallback : $_(key, values ? { values } : undefined) || autoFallback
   );

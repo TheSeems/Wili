@@ -1,7 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { onMount } from "svelte";
-  import { exchangeTelegramInitData, initApi, JUST_LOGGED_IN_KEY } from "$lib/auth";
+  import { exchangeTelegramInitData, JUST_LOGGED_IN_KEY } from "$lib/auth";
   import { authStore } from "$lib/stores/auth";
   import { makeAlert } from "$lib/stores/alerts";
   import CheckCircle2Icon from "@lucide/svelte/icons/check-circle-2";
@@ -9,7 +9,6 @@
   import { ListIcon } from "@lucide/svelte";
   import { _, isLoading as i18nLoading } from "svelte-i18n";
   import T from "$lib/components/T.svelte";
-  import I18nText from "$lib/components/I18nText.svelte";
   import WiliLogo from "$lib/components/WiliLogo.svelte";
 
   $: ({ token, user, isLoading, justLoggedIn } = $authStore);
@@ -30,21 +29,18 @@
     localStorage.removeItem(JUST_LOGGED_IN_KEY);
   }
 
-  // Manual OAuth approach - no widgets needed
   function redirectToYandexAuth() {
     if (!browser) return;
 
     const clientId = import.meta.env.VITE_YANDEX_CLIENT_ID;
     const redirectUri = `${window.location.origin}/auth/callback`;
 
-    // Build OAuth URL manually
     const oauthUrl = new URL("https://oauth.yandex.ru/authorize");
     oauthUrl.searchParams.set("response_type", "code");
     oauthUrl.searchParams.set("client_id", clientId);
     oauthUrl.searchParams.set("redirect_uri", redirectUri);
     oauthUrl.searchParams.set("scope", "login:email login:info");
 
-    // Redirect to Yandex OAuth
     window.location.href = oauthUrl.toString();
   }
 
@@ -79,7 +75,7 @@
   {:else}
     <h1 class="sr-only"><T key="home.title" fallback="Welcome to Wili" /></h1>
     <WiliLogo className="h-20 md:h-28 lg:h-32 mb-6" />
-    <p class="max-w-md text-center text-muted-foreground">
+    <p class="text-muted-foreground max-w-md text-center">
       <T
         key="home.description"
         fallback="Create and share wish-lists with friends, family, or anyone else."

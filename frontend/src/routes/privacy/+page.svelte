@@ -1,6 +1,5 @@
 <script lang="ts">
   import T from "$lib/components/T.svelte";
-  // Static privacy policy for MVP
   const lastUpdated = "2025-08-10";
   let { data } = $props();
   void data;

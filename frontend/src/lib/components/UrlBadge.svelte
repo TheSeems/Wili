@@ -8,7 +8,6 @@
 
   let { url, className = "", displayText = "", variant = "default" }: Props = $props();
 
-  // Extract domain from URL
   let domain = $derived(
     (() => {
       try {
@@ -23,18 +22,14 @@
     })()
   );
 
-  // Get favicon URL using Google's favicon service
   let faviconUrl = $derived(`https://www.google.com/s2/favicons?domain=${domain}&sz=32`);
 
-  // Clean URL for display
   let cleanUrl = $derived(url.startsWith("http") ? url : `https://${url}`);
 
-  // Determine what text to display
   let finalDisplayText = $derived(
     (() => {
       if (displayText) return displayText;
 
-      // For Yandex Market URLs, extract product info
       if (domain.includes("market.yandex.ru")) {
         try {
           const urlObj = new URL(cleanUrl);
@@ -42,24 +37,21 @@
           const cardIndex = pathParts.indexOf("card");
 
           if (cardIndex !== -1 && pathParts[cardIndex + 1]) {
-            const productName = pathParts[cardIndex + 1] || "Product";
             const productId = pathParts[cardIndex + 2] || "";
 
             const cleanId = productId.replace(/[^0-9]/g, "");
 
             if (cleanId) return `Yandex Market #${cleanId}`;
             return "Yandex Market";
-          } 
+          }
         } catch {}
       }
 
-      // Default to domain
       return domain;
     })()
   );
 </script>
 
-<!-- URL Badge using same pattern as Markdown -->
 <a
   href={cleanUrl}
   target="_blank"
@@ -110,7 +102,6 @@
 </a>
 
 <style>
-  /* URL Badge Styles - matching Markdown component */
   :global(.url-badge) {
     display: inline-flex;
     align-items: center;
@@ -131,7 +122,6 @@
     overflow: hidden;
   }
 
-  /* Inline variant - smaller and more compact */
   :global(.url-badge-inline) {
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
@@ -140,7 +130,6 @@
     vertical-align: middle;
   }
 
-  /* Ensure proper spacing between multiple inline badges */
   :global(.url-badge-inline + .url-badge-inline) {
     margin-left: 0.5rem;
   }

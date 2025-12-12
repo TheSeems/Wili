@@ -11,10 +11,8 @@
 
   let { key, fallback, values, tag = "span", class: className, ...restProps }: Props = $props();
 
-  // Auto-generate fallback from key if not provided
   let autoFallback = $derived(fallback || key.split(".").pop() || key);
 
-  // Get translated text with fallback
   let translatedText = $derived(
     $isLoading ? autoFallback : $_(key, values ? { values } : undefined) || autoFallback
   );

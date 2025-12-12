@@ -1,11 +1,9 @@
-// Helper functions for different alert positions and types
 import { makeAlert } from "$lib/stores/alerts";
 import CheckCircle2Icon from "@lucide/svelte/icons/check-circle-2";
 import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
 import XCircleIcon from "@lucide/svelte/icons/x-circle";
 import InfoIcon from "@lucide/svelte/icons/info";
 
-// Position-based helpers
 export function makeAlertCenter(options: {
   title: string;
   description?: string;
@@ -58,7 +56,6 @@ export function makeAlertBottomCenter(options: {
   });
 }
 
-// Type-based helpers with default center position
 export function showSuccessAlert(
   title: string,
   description?: string,

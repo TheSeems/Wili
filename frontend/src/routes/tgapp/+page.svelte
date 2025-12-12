@@ -6,21 +6,25 @@
   import { wishlistApi } from "$lib/api/wishlist-client";
   import { _ } from "svelte-i18n";
   import { Button } from "$lib/components/ui/button";
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
+  import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+  } from "$lib/components/ui/card";
   import ExpandableText from "$lib/components/ExpandableText.svelte";
   import { Textarea } from "$lib/components/ui/textarea";
   import { Input } from "$lib/components/ui/input";
-  import { saveBookingToken, getBookingToken, removeBookingToken } from "$lib/utils/booking-storage";
+  import {
+    saveBookingToken,
+    getBookingToken,
+    removeBookingToken,
+  } from "$lib/utils/booking-storage";
   import { showSuccessAlert, showInfoAlert } from "$lib/utils/alerts";
   import { authStore } from "$lib/stores/auth";
   import { exchangeTelegramInitData } from "$lib/auth";
-  import {
-    Loader2Icon,
-    LinkIcon,
-    CheckIcon,
-    XIcon,
-    ShieldOffIcon,
-  } from "@lucide/svelte";
+  import { Loader2Icon, LinkIcon, CheckIcon, XIcon, ShieldOffIcon } from "@lucide/svelte";
 
   type Wishlist = components["schemas"]["Wishlist"];
   type WishlistItem = components["schemas"]["WishlistItem"];
@@ -30,21 +34,22 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
 
-  // Booking form state
   let bookingItemId: string | null = $state(null);
   let anonymous = $state(false);
   let message = $state("");
   let defaultName: string | null = $state(null);
   let telegramAuthAttempted = $state(false);
-  const telegramBotUsername = env.PUBLIC_TELEGRAM_BOT_USERNAME;
   let telegramLoginLoading = $state(false);
   let telegramLoginAvailable = $state(false);
   let telegramInitData = $state("");
+  let creatingWishlist = $state(false);
 
   function parseListId(): string | null {
     if (typeof window === "undefined") return null;
 
-    const fromStart = (window as any)?.Telegram?.WebApp?.initDataUnsafe?.start_param as string | undefined;
+    const fromStart = (window as any)?.Telegram?.WebApp?.initDataUnsafe?.start_param as
+      | string
+      | undefined;
     const fromHashStart = (() => {
       try {
         const hash = window.location.hash?.replace(/^#/, "");
@@ -53,7 +58,9 @@
         const raw = params.get("tgWebAppData");
         if (!raw) return undefined;
         const inner = new URLSearchParams(raw);
-        return (inner.get("start_param") || inner.get("startapp") || undefined) as string | undefined;
+        return (inner.get("start_param") || inner.get("startapp") || undefined) as
+          | string
+          | undefined;
       } catch {
         return undefined;
       }
@@ -136,7 +143,11 @@
     }
   }
 
-  function extractUserFromHash(): { first_name?: string; last_name?: string; username?: string } | null {
+  function extractUserFromHash(): {
+    first_name?: string;
+    last_name?: string;
+    username?: string;
+  } | null {
     try {
       const hash = window.location.hash?.replace(/^#/, "");
       if (!hash) return null;
@@ -244,17 +255,32 @@
     }
   }
 
-  function openExternal(url: string) {
+  function openLinkInTelegram(url: string) {
     if (!url) return;
-    if (confirm($_("tgapp.openLinkConfirm"))) {
-      window.open(url, "_blank", "noreferrer");
+    const tg = (window as any)?.Telegram?.WebApp;
+    if (tg?.openLink) {
+      tg.openLink(url);
+      return;
+    }
+    window.open(url, "_blank", "noreferrer");
+  }
+
+  async function createMyWishlist() {
+    if (!$authStore.token) return;
+    creatingWishlist = true;
+    try {
+      const title = $_("wishlists.newWishlist");
+      const description = $_("wishlists.newWishlistDescription");
+      const wl = await wishlistApi.createWishlist({ title, description }, $authStore.token);
+      showSuccessAlert($_("tgapp.wishlistCreated"), undefined, "bottom-center");
+      openLinkInTelegram(`https://wili.me/wishlists/${wl.id}`);
+    } catch (e) {
+      console.warn("create wishlist failed", e);
+      showInfoAlert($_("wishlists.failedToCreate"), undefined, "bottom-center");
+    } finally {
+      creatingWishlist = false;
     }
   }
-
-  function shortUrl(url: string): string {
-    return url.replace(/^https?:\/\//, "");
-  }
-
 </script>
 
 <svelte:head>
@@ -263,13 +289,13 @@
 
 <div class="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-6">
   {#if loading}
-    <div class="flex items-center gap-3 text-muted-foreground">
+    <div class="text-muted-foreground flex items-center gap-3">
       <Loader2Icon class="h-5 w-5 animate-spin" />
       <span>{$_("tgapp.loadingWishlist")}</span>
     </div>
   {:else if error}
     <Card class="border-destructive">
-      <CardContent class="pt-6 text-destructive">
+      <CardContent class="text-destructive pt-6">
         {error}
       </CardContent>
     </Card>
@@ -277,15 +303,31 @@
     <Card>
       <CardHeader>
         <CardTitle>Wili</CardTitle>
-        <CardDescription>{$_("tgapp.openFromChat")}</CardDescription>
+        <CardDescription>
+          {#if $authStore.token}
+            {$_("tgapp.homeCreatePrompt", { values: { name: $authStore.user?.displayName || "" } })}
+          {:else if telegramLoginAvailable}
+            {$_("tgapp.homeLoginPrompt")}
+          {:else}
+            {$_("tgapp.openFromChat")}
+          {/if}
+        </CardDescription>
       </CardHeader>
       <CardContent class="flex flex-col gap-3">
-        {#if telegramLoginAvailable && !$authStore.token}
+        {#if !$authStore.token && telegramLoginAvailable}
           <Button disabled={telegramLoginLoading} onclick={loginWithTelegram}>
             {telegramLoginLoading ? $_("common.loading") : $_("auth.loginWithTelegram")}
           </Button>
         {/if}
-        <Button variant="outline" href="https://wili.me" target="_blank" rel="noreferrer">
+        {#if $authStore.token}
+          <Button disabled={creatingWishlist} onclick={createMyWishlist}>
+            {creatingWishlist ? $_("common.loading") : $_("tgapp.createWishlist")}
+          </Button>
+          <Button variant="outline" onclick={() => openLinkInTelegram("https://wili.me/wishlists")}>
+            {$_("tgapp.openMyWishlists")}
+          </Button>
+        {/if}
+        <Button variant="outline" onclick={() => openLinkInTelegram("https://wili.me")}>
           {$_("tgapp.openWiliWeb")}
         </Button>
       </CardContent>
@@ -313,9 +355,6 @@
             />
           {/if}
         </div>
-        {#if wishlist.description}
-          <!-- description moved above -->
-        {/if}
       </div>
     </div>
 
@@ -323,9 +362,11 @@
       {#each wishlist.items || [] as item}
         <Card class="h-full">
           <CardHeader>
-            <CardTitle class="line-clamp-2">{item.data?.name || $_("wishlists.untitledItem")}</CardTitle>
+            <CardTitle class="line-clamp-2"
+              >{item.data?.name || $_("wishlists.untitledItem")}</CardTitle
+            >
             {#if item.data?.description}
-              <CardDescription class="text-sm text-muted-foreground">
+              <CardDescription class="text-muted-foreground text-sm">
                 <ExpandableText
                   content={item.data.description}
                   className="text-sm text-muted-foreground"
@@ -339,14 +380,18 @@
           </CardHeader>
           <CardContent class="flex flex-col gap-3">
             {#if item.booking}
-              <div class="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-sm text-green-700 dark:text-green-300">
+              <div
+                class="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-sm text-green-700 dark:text-green-300"
+              >
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center gap-2">
                     <CheckIcon class="h-4 w-4 shrink-0" />
                     <span>{$_("tgapp.alreadyBooked")}</span>
                   </div>
                   {#if item.booking.bookerName}
-                    <div class="text-green-700/80 dark:text-green-200/80 text-sm">{item.booking.bookerName}</div>
+                    <div class="text-sm text-green-700/80 dark:text-green-200/80">
+                      {item.booking.bookerName}
+                    </div>
                   {/if}
                 </div>
                 {#if listId && getBookingToken(listId, item.id)}
@@ -356,57 +401,55 @@
                   </Button>
                 {/if}
               </div>
-            {:else}
-              {#if bookingItemId === item.id}
-                <div class="space-y-3 px-1 py-1">
-                  <label class="flex items-center gap-2 text-sm">
-                    {#if defaultName}
-                      <input type="checkbox" bind:checked={anonymous} />
-                      {$_("tgapp.bookAnonymously")}
-                    {:else}
-                      <span class="text-muted-foreground">
-                        {$_("tgapp.willBeAnonymous")}
-                      </span>
-                    {/if}
-                  </label>
-                  {#if !anonymous && defaultName}
-                    <div class="text-muted-foreground text-sm">
-                      {$_("tgapp.nameLabel")}: {defaultName}
-                    </div>
+            {:else if bookingItemId === item.id}
+              <div class="space-y-3 px-1 py-1">
+                <label class="flex items-center gap-2 text-sm">
+                  {#if defaultName}
+                    <input type="checkbox" bind:checked={anonymous} />
+                    {$_("tgapp.bookAnonymously")}
+                  {:else}
+                    <span class="text-muted-foreground">
+                      {$_("tgapp.willBeAnonymous")}
+                    </span>
                   {/if}
-                  <div class="space-y-2">
-                    <Input
-                      placeholder={$_("tgapp.messagePlaceholder")}
-                      bind:value={message}
-                      class="w-full text-sm"
-                    />
+                </label>
+                {#if !anonymous && defaultName}
+                  <div class="text-muted-foreground text-sm">
+                    {$_("tgapp.nameLabel")}: {defaultName}
                   </div>
-                  <div class="mt-3 flex gap-3">
-                    <Button class="gap-2" onclick={() => book(item)}>
-                      <CheckIcon class="h-4 w-4" />
-                      {$_("items.bookItem")}
-                    </Button>
-                    <Button variant="outline" onclick={closeBooking}>
-                      <XIcon class="h-4 w-4" />
-                      {$_("common.cancel")}
-                    </Button>
-                  </div>
+                {/if}
+                <div class="space-y-2">
+                  <Input
+                    placeholder={$_("tgapp.messagePlaceholder")}
+                    bind:value={message}
+                    class="w-full text-sm"
+                  />
                 </div>
-              {:else}
-                <Button class="w-full gap-2" onclick={() => startBooking(item.id)}>
-                  <ShieldOffIcon class="h-4 w-4" />
-                  {$_("items.bookItem")}
-                </Button>
-              {/if}
+                <div class="mt-3 flex gap-3">
+                  <Button class="gap-2" onclick={() => book(item)}>
+                    <CheckIcon class="h-4 w-4" />
+                    {$_("items.bookItem")}
+                  </Button>
+                  <Button variant="outline" onclick={closeBooking}>
+                    <XIcon class="h-4 w-4" />
+                    {$_("common.cancel")}
+                  </Button>
+                </div>
+              </div>
+            {:else}
+              <Button class="w-full gap-2" onclick={() => startBooking(item.id)}>
+                <ShieldOffIcon class="h-4 w-4" />
+                {$_("items.bookItem")}
+              </Button>
             {/if}
           </CardContent>
         </Card>
       {/each}
     </div>
 
-    <div class="mt-6 text-center text-sm text-muted-foreground">
+    <div class="text-muted-foreground mt-6 text-center text-sm">
       <a
-        class="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-primary underline-offset-4 hover:text-primary"
+        class="border-border text-primary hover:text-primary inline-flex items-center gap-2 rounded-full border px-3 py-1 underline-offset-4"
         href={wishlist ? `${window.location.origin}/wishlists/${wishlist.id}` : "#"}
         target="_blank"
         rel="noreferrer"
@@ -417,4 +460,3 @@
     </div>
   {/if}
 </div>
-

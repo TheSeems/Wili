@@ -15,7 +15,6 @@ type pgRepo struct {
 	db *sqlx.DB
 }
 
-// dbUser is a struct that matches the database schema exactly
 type dbUser struct {
 	ID          uuid.UUID    `db:"id"`
 	DisplayName string       `db:"display_name"`
@@ -24,7 +23,6 @@ type dbUser struct {
 	TelegramID  *int64       `db:"telegram_id"`
 }
 
-// toUsergen converts dbUser to usergen.User
 func (du *dbUser) toUsergen() *usergen.User {
 	return &usergen.User{
 		Id:          du.ID,
@@ -79,7 +77,7 @@ func (p *pgRepo) Upsert(ctx context.Context, u *usergen.User) error {
 func (p *pgRepo) UpsertWithEmail(ctx context.Context, u *usergen.User, email string) error {
 	_, err := p.db.ExecContext(ctx, `INSERT INTO users (id, display_name, avatar_url, email)
 		VALUES ($1,$2,$3,$4)
-		ON CONFLICT (email) DO UPDATE SET 
+		ON CONFLICT (email) DO UPDATE SET
 			display_name=EXCLUDED.display_name, avatar_url=EXCLUDED.avatar_url`,
 		u.Id, u.DisplayName, u.AvatarUrl, email)
 	return err
