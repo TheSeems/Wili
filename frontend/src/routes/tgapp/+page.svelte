@@ -41,12 +41,26 @@
     if (typeof window === "undefined") return null;
 
     const fromStart = (window as any)?.Telegram?.WebApp?.initDataUnsafe?.start_param as string | undefined;
+    const fromHashStart = (() => {
+      try {
+        const hash = window.location.hash?.replace(/^#/, "");
+        if (!hash) return undefined;
+        const params = new URLSearchParams(hash);
+        const raw = params.get("tgWebAppData");
+        if (!raw) return undefined;
+        const inner = new URLSearchParams(raw);
+        return (inner.get("start_param") || inner.get("startapp") || undefined) as string | undefined;
+      } catch {
+        return undefined;
+      }
+    })();
     const fromQuery =
       page?.url?.searchParams?.get("start") ||
       page?.url?.searchParams?.get("list") ||
-      page?.url?.searchParams?.get("startapp");
+      page?.url?.searchParams?.get("startapp") ||
+      page?.url?.searchParams?.get("tgWebAppStartParam");
 
-    const candidate = fromStart || fromQuery || "";
+    const candidate = fromStart || fromHashStart || fromQuery || "";
     const match = candidate.match(/^list_([0-9a-fA-F-]{36})$/);
     return match ? match[1] : null;
   }
