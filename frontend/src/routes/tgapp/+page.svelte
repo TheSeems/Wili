@@ -255,16 +255,6 @@
     }
   }
 
-  function openLinkInTelegram(url: string) {
-    if (!url) return;
-    const tg = (window as any)?.Telegram?.WebApp;
-    if (tg?.openLink) {
-      tg.openLink(url);
-      return;
-    }
-    window.open(url, "_blank", "noreferrer");
-  }
-
   async function createMyWishlist() {
     if (!$authStore.token) return;
     creatingWishlist = true;
@@ -273,7 +263,9 @@
       const description = $_("wishlists.newWishlistDescription");
       const wl = await wishlistApi.createWishlist({ title, description }, $authStore.token);
       showSuccessAlert($_("tgapp.wishlistCreated"), undefined, "bottom-center");
-      openLinkInTelegram(`https://wili.me/wishlists/${wl.id}`);
+      wishlist = wl as Wishlist;
+      listId = wl.id;
+      error = null;
     } catch (e) {
       console.warn("create wishlist failed", e);
       showInfoAlert($_("wishlists.failedToCreate"), undefined, "bottom-center");
@@ -323,13 +315,18 @@
           <Button disabled={creatingWishlist} onclick={createMyWishlist}>
             {creatingWishlist ? $_("common.loading") : $_("tgapp.createWishlist")}
           </Button>
-          <Button variant="outline" onclick={() => openLinkInTelegram("https://wili.me/wishlists")}>
-            {$_("tgapp.openMyWishlists")}
-          </Button>
         {/if}
-        <Button variant="outline" onclick={() => openLinkInTelegram("https://wili.me")}>
-          {$_("tgapp.openWiliWeb")}
-        </Button>
+        <div class="text-muted-foreground mt-3 text-center text-sm">
+          <a
+            class="border-border text-primary hover:text-primary inline-flex items-center gap-2 rounded-full border px-3 py-1 underline-offset-4"
+            href="https://wili.me"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <LinkIcon class="h-4 w-4" />
+            {$_("tgapp.openInBrowser")}
+          </a>
+        </div>
       </CardContent>
     </Card>
   {:else if wishlist}
