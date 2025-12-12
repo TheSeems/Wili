@@ -37,6 +37,7 @@ type telegramUpdate struct {
 
 type telegramMessage struct {
 	MessageID int64            `json:"message_id"`
+	From      telegramUser     `json:"from"`
 	Chat      telegramChat     `json:"chat"`
 	Text      string           `json:"text"`
 	Entities  []telegramEntity `json:"entities"`
@@ -59,7 +60,8 @@ type telegramInlineQuery struct {
 }
 
 type telegramUser struct {
-	ID int64 `json:"id"`
+	ID           int64  `json:"id"`
+	LanguageCode string `json:"language_code,omitempty"`
 }
 
 type inlineKeyboardButton struct {
@@ -159,6 +161,97 @@ func newBot(cfg config) *bot {
 	}
 }
 
+func normalizeLang(code string) string {
+	c := strings.ToLower(strings.TrimSpace(code))
+	if strings.HasPrefix(c, "en") {
+		return "en"
+	}
+	return "ru"
+}
+
+const (
+	keyMiniAppEntryText    = "miniapp.entry.text"
+	keyMiniAppEntryButton  = "miniapp.entry.button"
+	keySharePromptText     = "share.prompt.text"
+	keySharePromptSendChat = "share.prompt.send_chat"
+	keySharePromptOpen     = "share.prompt.open"
+	keyPreviewBaseDesc     = "preview.base_desc"
+	keyPreviewText         = "preview.text"
+	keyPreviewOpen         = "preview.open"
+	keyInlineHelpTitle     = "inline.help.title"
+	keyInlineHelpDesc      = "inline.help.desc"
+	keyInlineHelpMessage   = "inline.help.message"
+	keyInlineErrorTitle    = "inline.error.title"
+	keyInlineErrorDesc     = "inline.error.desc"
+	keyInlineErrorMessage  = "inline.error.message"
+	keyInlineBaseDesc      = "inline.base_desc"
+	keyInlineMessage       = "inline.message"
+	keyInlineOpenDesc      = "inline.open.desc"
+	keyInlineOpenButton    = "inline.open.button"
+)
+
+var botDict = map[string]map[string]string{
+	"ru": {
+		keyMiniAppEntryText:    "Откройте Wili в Telegram Mini App.",
+		keyMiniAppEntryButton:  "Открыть Wili",
+		keySharePromptText:     "<b>«%s»</b>\n\nНажмите кнопку ниже, выберите чат и отправьте сообщение с кнопкой.\n\nЕсли не работает — можно открыть в <a href=\"%s\">web</a>.",
+		keySharePromptSendChat: "Отправить в чат…",
+		keySharePromptOpen:     "Открыть вишлист",
+		keyPreviewBaseDesc:     "Посмотрите список желаний и забронируйте то, что хотите подарить. Чтобы увидеть, что уже забронировано, откройте вишлист.",
+		keyPreviewText:         "<b>«%s»</b>\n\n%s\n\nМожно посмотреть по кнопке ниже или в <a href=\"%s\">web</a>",
+		keyPreviewOpen:         "Открыть вишлист",
+		keyInlineHelpTitle:     "Как поделиться вишлистом",
+		keyInlineHelpDesc:      "Формат: wishlist:<uuid>",
+		keyInlineHelpMessage:   "Введите запрос в формате: wishlist:<uuid>",
+		keyInlineErrorTitle:    "Не удалось загрузить вишлист",
+		keyInlineErrorDesc:     "Проверьте id и попробуйте снова",
+		keyInlineErrorMessage:  "Не удалось загрузить вишлист. Проверьте id и попробуйте снова.",
+		keyInlineBaseDesc:      "Посмотрите список подарков и забронируйте то, что хотите подарить.",
+		keyInlineMessage:       "<b>«%s»</b>\n\n%s\n\nЕсли не работает кнопка, можно открыть в <a href=\"%s\">web</a>",
+		keyInlineOpenDesc:      "Открыть вишлист",
+		keyInlineOpenButton:    "Открыть вишлист",
+	},
+	"en": {
+		keyMiniAppEntryText:    "Open Wili in Telegram Mini App.",
+		keyMiniAppEntryButton:  "Open Wili",
+		keySharePromptText:     "<b>«%s»</b>\n\nTap the button below, choose a chat and send the message with a button.\n\nIf it doesn't work — open in <a href=\"%s\">web</a>.",
+		keySharePromptSendChat: "Send to chat…",
+		keySharePromptOpen:     "Open wishlist",
+		keyPreviewBaseDesc:     "View the wish list and book what you want to give. To see what's already booked, open the wishlist.",
+		keyPreviewText:         "<b>«%s»</b>\n\n%s\n\nOpen with the button below or in <a href=\"%s\">web</a>",
+		keyPreviewOpen:         "Open wishlist",
+		keyInlineHelpTitle:     "How to share a wishlist",
+		keyInlineHelpDesc:      "Format: wishlist:<uuid>",
+		keyInlineHelpMessage:   "Type a query in the format: wishlist:<uuid>",
+		keyInlineErrorTitle:    "Couldn't load wishlist",
+		keyInlineErrorDesc:     "Check the id and try again",
+		keyInlineErrorMessage:  "Couldn't load wishlist. Check the id and try again.",
+		keyInlineBaseDesc:      "View the gift list and book what you want to give.",
+		keyInlineMessage:       "<b>«%s»</b>\n\n%s\n\nIf the button doesn't work, open in <a href=\"%s\">web</a>",
+		keyInlineOpenDesc:      "Open wishlist",
+		keyInlineOpenButton:    "Open wishlist",
+	},
+}
+
+func tr(lang, key string) string {
+	l := normalizeLang(lang)
+	if m, ok := botDict[l]; ok {
+		if v, ok := m[key]; ok && strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	if m, ok := botDict["ru"]; ok {
+		if v, ok := m[key]; ok {
+			return v
+		}
+	}
+	return key
+}
+
+func trf(lang, key string, args ...any) string {
+	return fmt.Sprintf(tr(lang, key), args...)
+}
+
 func (b *bot) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	if b.cfg.webhookToken != "" {
 		if got := r.Header.Get("X-Telegram-Bot-Api-Secret-Token"); got != b.cfg.webhookToken {
@@ -193,7 +286,7 @@ func (b *bot) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	if startParam == "" {
 		if strings.HasPrefix(strings.TrimSpace(upd.Message.Text), "/start") {
 			log.Printf("webhook start: chat=%d start_param=<empty>", upd.Message.Chat.ID)
-			if err := b.sendMiniAppEntry(ctx, upd.Message.Chat.ID); err != nil {
+			if err := b.sendMiniAppEntry(ctx, upd.Message.Chat.ID, upd.Message.From.LanguageCode); err != nil {
 				log.Printf("send miniapp entry failed: chat=%d err=%v", upd.Message.Chat.ID, err)
 			}
 		} else {
@@ -206,7 +299,7 @@ func (b *bot) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	shareListID := parseShareListID(startParam)
 	if shareListID != "" {
 		log.Printf("webhook share: chat=%d start_param=%s list=%s", upd.Message.Chat.ID, startParam, shareListID)
-		if err := b.sendSharePrompt(ctx, upd.Message.Chat.ID, shareListID); err != nil {
+		if err := b.sendSharePrompt(ctx, upd.Message.Chat.ID, shareListID, upd.Message.From.LanguageCode); err != nil {
 			log.Printf("send share prompt failed: chat=%d list=%s err=%v", upd.Message.Chat.ID, shareListID, err)
 		}
 		w.WriteHeader(http.StatusOK)
@@ -222,14 +315,14 @@ func (b *bot) handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("webhook start: chat=%d start_param=%s list=%s", upd.Message.Chat.ID, startParam, listID)
 
-	if err := b.sendWishlistPreview(ctx, upd.Message.Chat.ID, listID); err != nil {
+	if err := b.sendWishlistPreview(ctx, upd.Message.Chat.ID, listID, upd.Message.From.LanguageCode); err != nil {
 		log.Printf("send preview failed: chat=%d list=%s err=%v", upd.Message.Chat.ID, listID, err)
 	}
 	w.WriteHeader(http.StatusOK)
 }
 
-func (b *bot) sendMiniAppEntry(ctx context.Context, chatID int64) error {
-	text := "Откройте Wili в Telegram Mini App."
+func (b *bot) sendMiniAppEntry(ctx context.Context, chatID int64, lang string) error {
+	text := tr(lang, keyMiniAppEntryText)
 	msg := sendMessageRequest{
 		ChatID:    chatID,
 		Text:      text,
@@ -237,7 +330,7 @@ func (b *bot) sendMiniAppEntry(ctx context.Context, chatID int64) error {
 		ReplyMarkup: &inlineKeyboardMarkup{
 			InlineKeyboard: [][]inlineKeyboardButton{
 				{
-					{Text: "Открыть Wili", WebApp: &webAppInfo{URL: b.cfg.webAppURL}},
+					{Text: tr(lang, keyMiniAppEntryButton), WebApp: &webAppInfo{URL: b.cfg.webAppURL}},
 				},
 			},
 		},
@@ -276,16 +369,17 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 	}
 
 	log.Printf("inline query: from=%d id=%s q=%q", q.From.ID, q.ID, q.Query)
+	lang := q.From.LanguageCode
 
 	listID := parseInlineQueryListID(q.Query)
 	if listID == "" {
 		help := map[string]interface{}{
 			"type":        "article",
 			"id":          "help",
-			"title":       "Как поделиться вишлистом",
-			"description": "Формат: wishlist:<uuid>",
+			"title":       tr(lang, keyInlineHelpTitle),
+			"description": tr(lang, keyInlineHelpDesc),
 			"input_message_content": map[string]interface{}{
-				"message_text": "Введите запрос в формате: wishlist:<uuid>",
+				"message_text": tr(lang, keyInlineHelpMessage),
 			},
 		}
 		return b.answerInlineQuery(ctx, q.ID, []interface{}{help})
@@ -297,10 +391,10 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 		errCard := map[string]interface{}{
 			"type":        "article",
 			"id":          "error",
-			"title":       "Не удалось загрузить вишлист",
-			"description": "Проверьте id и попробуйте снова",
+			"title":       tr(lang, keyInlineErrorTitle),
+			"description": tr(lang, keyInlineErrorDesc),
 			"input_message_content": map[string]interface{}{
-				"message_text": "Не удалось загрузить вишлист. Проверьте id и попробуйте снова.",
+				"message_text": tr(lang, keyInlineErrorMessage),
 			},
 		}
 		return b.answerInlineQuery(ctx, q.ID, []interface{}{errCard})
@@ -310,7 +404,7 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 	fallbackURL := fmt.Sprintf("%s/wishlists/%s", b.cfg.webFallback, listID)
 	log.Printf("inline query resolved: id=%s list=%s url=%s", q.ID, listID, webAppURL)
 
-	baseDescription := "Посмотрите список подарков и забронируйте то, что хотите подарить."
+	baseDescription := tr(lang, keyInlineBaseDesc)
 	wlDesc := strings.TrimSpace(func() string {
 		if wl.Description == nil {
 			return ""
@@ -320,13 +414,13 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 	if wlDesc != "" {
 		baseDescription = fmt.Sprintf("%s\n\n%s", wlDesc, baseDescription)
 	}
-	messageText := fmt.Sprintf("<b>«%s»</b>\n\n%s\n\nЕсли не работает кнопка, можно открыть в <a href=\"%s\">web</a>", esc(wl.Title), esc(baseDescription), esc(fallbackURL))
+	messageText := trf(lang, keyInlineMessage, esc(wl.Title), esc(baseDescription), esc(fallbackURL))
 
 	result := map[string]interface{}{
 		"type":        "article",
 		"id":          fmt.Sprintf("wishlist_%s", listID),
 		"title":       wl.Title,
-		"description": "Открыть вишлист",
+		"description": tr(lang, keyInlineOpenDesc),
 		"input_message_content": map[string]interface{}{
 			"message_text":             messageText,
 			"parse_mode":               "HTML",
@@ -335,7 +429,7 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 		"reply_markup": inlineKeyboardMarkup{
 			InlineKeyboard: [][]inlineKeyboardButton{
 				{
-					{Text: "Открыть вишлист", URL: webAppURL},
+					{Text: tr(lang, keyInlineOpenButton), URL: webAppURL},
 				},
 			},
 		},
@@ -452,7 +546,7 @@ func (b *bot) fetchWishlist(ctx context.Context, listID string) (*wishlistRespon
 	return &wl, nil
 }
 
-func (b *bot) sendWishlistPreview(ctx context.Context, chatID int64, listID string) error {
+func (b *bot) sendWishlistPreview(ctx context.Context, chatID int64, listID string, lang string) error {
 	wl, err := b.fetchWishlist(ctx, listID)
 	if err != nil {
 		return err
@@ -461,7 +555,7 @@ func (b *bot) sendWishlistPreview(ctx context.Context, chatID int64, listID stri
 	webAppURL := fmt.Sprintf("%s?start=list_%s", b.cfg.webAppURL, listID)
 	fallbackURL := fmt.Sprintf("%s/wishlists/%s", b.cfg.webFallback, listID)
 
-	baseDescription := "Посмотрите список желаний и забронируйте то, что хотите подарить. Чтобы увидеть, что уже забронировано, откройте вишлист."
+	baseDescription := tr(lang, keyPreviewBaseDesc)
 	wlDesc := strings.TrimSpace(func() string {
 		if wl.Description == nil {
 			return ""
@@ -471,7 +565,7 @@ func (b *bot) sendWishlistPreview(ctx context.Context, chatID int64, listID stri
 	if wlDesc != "" {
 		baseDescription = fmt.Sprintf("%s\n\n%s", wlDesc, baseDescription)
 	}
-	text := fmt.Sprintf("<b>«%s»</b>\n\n%s\n\nМожно посмотреть по кнопке ниже или в <a href=\"%s\">web</a>", esc(wl.Title), esc(baseDescription), esc(fallbackURL))
+	text := trf(lang, keyPreviewText, esc(wl.Title), esc(baseDescription), esc(fallbackURL))
 
 	msg := sendMessageRequest{
 		ChatID:                chatID,
@@ -481,7 +575,7 @@ func (b *bot) sendWishlistPreview(ctx context.Context, chatID int64, listID stri
 		ReplyMarkup: &inlineKeyboardMarkup{
 			InlineKeyboard: [][]inlineKeyboardButton{
 				{
-					{Text: "Открыть вишлист", WebApp: &webAppInfo{URL: webAppURL}},
+					{Text: tr(lang, keyPreviewOpen), WebApp: &webAppInfo{URL: webAppURL}},
 				},
 			},
 		},
@@ -511,7 +605,7 @@ func (b *bot) sendWishlistPreview(ctx context.Context, chatID int64, listID stri
 	return nil
 }
 
-func (b *bot) sendSharePrompt(ctx context.Context, chatID int64, listID string) error {
+func (b *bot) sendSharePrompt(ctx context.Context, chatID int64, listID string, lang string) error {
 	wl, err := b.fetchWishlist(ctx, listID)
 	if err != nil {
 		return err
@@ -520,7 +614,7 @@ func (b *bot) sendSharePrompt(ctx context.Context, chatID int64, listID string) 
 	webAppURL := fmt.Sprintf("%s?start=list_%s", b.cfg.webAppURL, listID)
 	fallbackURL := fmt.Sprintf("%s/wishlists/%s", b.cfg.webFallback, listID)
 
-	text := fmt.Sprintf("<b>«%s»</b>\n\nНажмите кнопку ниже, выберите чат и отправьте сообщение с кнопкой.\n\nЕсли не работает — можно открыть в <a href=\"%s\">web</a>.", esc(wl.Title), esc(fallbackURL))
+	text := trf(lang, keySharePromptText, esc(wl.Title), esc(fallbackURL))
 	msg := sendMessageRequest{
 		ChatID:                chatID,
 		Text:                  text,
@@ -529,10 +623,10 @@ func (b *bot) sendSharePrompt(ctx context.Context, chatID int64, listID string) 
 		ReplyMarkup: &inlineKeyboardMarkup{
 			InlineKeyboard: [][]inlineKeyboardButton{
 				{
-					{Text: "Отправить в чат…", SwitchInlineQuery: fmt.Sprintf("wishlist:%s", listID)},
+					{Text: tr(lang, keySharePromptSendChat), SwitchInlineQuery: fmt.Sprintf("wishlist:%s", listID)},
 				},
 				{
-					{Text: "Открыть вишлист", WebApp: &webAppInfo{URL: webAppURL}},
+					{Text: tr(lang, keySharePromptOpen), WebApp: &webAppInfo{URL: webAppURL}},
 				},
 			},
 		},

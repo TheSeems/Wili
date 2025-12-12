@@ -44,6 +44,7 @@
     "anonymousViewing": "👀 You're viewing this wishlist anonymously.",
     "loginToCreateWishlists": "to create your own wishlists.",
     "loginWithYandex": "Login with Yandex",
+    "loginWithTelegram": "Login with Telegram",
     "authenticating": "Authenticating…",
     "redirectMessage": "If you are not redirected in a few seconds, please",
     "clickHere": "click here"
@@ -149,6 +150,8 @@
     "pageTitle": "Open wishlist",
     "loadingWishlist": "Loading wishlist…",
     "loadError": "Failed to load wishlist. Please try again later.",
+    "openFromChat": "Open a wishlist using a link from chat.",
+    "openWiliWeb": "Open wili.me",
     "bookFailed": "Failed to book",
     "unbookFailed": "Failed to unbook",
     "badLink": "Invalid link. Please forward the invite again.",

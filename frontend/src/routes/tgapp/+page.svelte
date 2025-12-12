@@ -277,7 +277,7 @@
     <Card>
       <CardHeader>
         <CardTitle>Wili</CardTitle>
-        <CardDescription>Откройте вишлист по ссылке из чата.</CardDescription>
+        <CardDescription>{$_("tgapp.openFromChat")}</CardDescription>
       </CardHeader>
       <CardContent class="flex flex-col gap-3">
         {#if telegramLoginAvailable && !$authStore.token}
@@ -286,7 +286,7 @@
           </Button>
         {/if}
         <Button variant="outline" href="https://wili.me" target="_blank" rel="noreferrer">
-          Открыть wili.me
+          {$_("tgapp.openWiliWeb")}
         </Button>
       </CardContent>
     </Card>
