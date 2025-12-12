@@ -258,7 +258,7 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 		"reply_markup": inlineKeyboardMarkup{
 			InlineKeyboard: [][]inlineKeyboardButton{
 				{
-					{Text: "Открыть вишлист", WebApp: &webAppInfo{URL: webAppURL}},
+					{Text: "Открыть вишлист", URL: webAppURL},
 				},
 			},
 		},
