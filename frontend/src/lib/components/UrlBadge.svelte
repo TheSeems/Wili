@@ -45,14 +45,11 @@
             const productName = pathParts[cardIndex + 1] || "Product";
             const productId = pathParts[cardIndex + 2] || "";
 
-            // Clean and format the product name
-            const cleanName = productName
-              .replace(/-/g, " ")
-              .replace(/\b\w/g, (l) => l.toUpperCase());
             const cleanId = productId.replace(/[^0-9]/g, "");
 
-            return cleanId ? `${cleanName} #${cleanId}` : cleanName;
-          }
+            if (cleanId) return `Yandex Market #${cleanId}`;
+            return "Yandex Market";
+          } 
         } catch {}
       }
 

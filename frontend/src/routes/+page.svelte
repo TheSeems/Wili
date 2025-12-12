@@ -13,6 +13,7 @@
   import WiliLogo from "$lib/components/WiliLogo.svelte";
 
   $: ({ token, user, isLoading, justLoggedIn } = $authStore);
+  let telegramLoginAvailable = false;
 
   $: if (justLoggedIn && user) {
     makeAlert({
@@ -52,9 +53,14 @@
     if (!initData) return;
     await exchangeTelegramInitData(initData);
   }
+
+  onMount(() => {
+    if (!browser) return;
+    telegramLoginAvailable = Boolean((window as any)?.Telegram?.WebApp?.initData);
+  });
 </script>
 
-<section class="flex h-[80vh] flex-col items-center justify-center px-4">
+<section class="flex flex-col items-center justify-center px-4 py-10">
   {#if isLoading}
     <div class="flex flex-col items-center gap-4">
       <div class="h-12 w-12 animate-spin rounded-full border-b-2 border-gray-900"></div>
@@ -81,7 +87,7 @@
         </Button>
       </div>
     {:else}
-      {#if browser && (window as any)?.Telegram?.WebApp?.initData}
+      {#if telegramLoginAvailable}
         <Button
           onclick={loginWithTelegram}
           class="mt-8 w-full border border-white/10 bg-black text-white hover:bg-black/90 sm:w-1/3"

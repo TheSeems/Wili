@@ -20,7 +20,6 @@
     CheckIcon,
     XIcon,
     ShieldOffIcon,
-    SendIcon,
   } from "@lucide/svelte";
 
   type Wishlist = components["schemas"]["Wishlist"];
@@ -38,6 +37,8 @@
   let defaultName: string | null = $state(null);
   let telegramAuthAttempted = $state(false);
   const telegramBotUsername = env.PUBLIC_TELEGRAM_BOT_USERNAME;
+  let telegramLoginLoading = $state(false);
+  let telegramLoginAvailable = $state(false);
 
   function parseListId(): string | null {
     if (typeof window === "undefined") return null;
@@ -180,13 +181,15 @@
       tg.setBottomBarColor?.("bg_color");
       const user = tg.initDataUnsafe?.user;
       setDefaultNameFromUser(user);
+      telegramLoginAvailable = Boolean(tg.initData);
 
       const initData = (tg.initData as string | undefined) || "";
       if (!telegramAuthAttempted && !$authStore.token && initData) {
         telegramAuthAttempted = true;
+        telegramLoginLoading = true;
         exchangeTelegramInitData(initData).catch((e) =>
           console.warn("telegram auth failed", e)
-        );
+        ).finally(() => (telegramLoginLoading = false));
       }
     }
     if (!defaultName) {
@@ -200,6 +203,22 @@
     loadWishlist();
   });
 
+  async function loginWithTelegram() {
+    const tg = (window as any)?.Telegram?.WebApp;
+    const initData = (tg?.initData as string | undefined) || "";
+    if (!initData) return;
+    telegramLoginLoading = true;
+    try {
+      await exchangeTelegramInitData(initData);
+      showSuccessAlert($_("home.welcomeTitle"), undefined, "bottom-center");
+    } catch (e) {
+      console.warn("telegram auth failed", e);
+      showInfoAlert($_("tgapp.loadError"), undefined, "bottom-center");
+    } finally {
+      telegramLoginLoading = false;
+    }
+  }
+
   function openExternal(url: string) {
     if (!url) return;
     if (confirm($_("tgapp.openLinkConfirm"))) {
@@ -211,31 +230,6 @@
     return url.replace(/^https?:\/\//, "");
   }
 
-  function shareToTelegram() {
-    if (!wishlist || !listId) return;
-
-    const tg = (window as any)?.Telegram?.WebApp;
-    if (tg?.switchInlineQuery) {
-      try {
-        tg.switchInlineQuery(`wishlist:${listId}`, [
-          "users",
-          "groups",
-          "supergroups",
-          "channels",
-        ]);
-        return;
-      } catch (e) {
-        console.warn("Telegram switchInlineQuery failed", e);
-      }
-    }
-
-    if (tg?.openTelegramLink && telegramBotUsername) {
-      tg.openTelegramLink(`https://t.me/${telegramBotUsername}?start=share_${listId}`);
-      return;
-    }
-
-    showInfoAlert($_("wishlists.shareToTelegram"), undefined, "bottom-center");
-  }
 </script>
 
 <svelte:head>
@@ -255,6 +249,13 @@
       </CardContent>
     </Card>
   {:else if wishlist}
+    {#if telegramLoginAvailable && !$authStore.token}
+      <div class="flex items-center justify-end">
+        <Button variant="outline" disabled={telegramLoginLoading} onclick={loginWithTelegram}>
+          {telegramLoginLoading ? $_("common.loading") : $_("auth.loginWithTelegram")}
+        </Button>
+      </div>
+    {/if}
     <div class="p-0">
       <div class="flex items-start justify-between gap-3">
         <div class="space-y-2">
@@ -270,10 +271,6 @@
             />
           {/if}
         </div>
-        <Button variant="outline" class="shrink-0 gap-2" onclick={shareToTelegram}>
-          <SendIcon class="h-4 w-4" />
-          {$_("wishlists.shareToTelegram")}
-        </Button>
         {#if wishlist.description}
           <!-- description moved above -->
         {/if}
