@@ -69,11 +69,11 @@
     name: "Wili",
     url: page.url.origin,
     inLanguage: $locale === "ru" ? "ru-RU" : "en-US",
-    description: defaultDescription
+    description: defaultDescription,
   })}</script>`}
 </svelte:head>
 {#if i18nReady}
-  {#if page.url.pathname !== "/auth/callback"}
+  {#if page.url.pathname !== "/auth/callback" && !page.url.pathname.startsWith("/tgapp")}
     <NavBar />
   {/if}
 

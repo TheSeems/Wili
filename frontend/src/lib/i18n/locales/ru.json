@@ -120,6 +120,7 @@
     "message": "Сообщение (необязательно)",
     "messagePlaceholder": "Добавьте сообщение...",
     "messageOptional": "Добавьте сообщение для владельца вишлиста",
+    "addedSuccessfully": "Элемент добавлен",
     "bookedSuccessfully": "Элемент успешно забронирован!",
     "unbookedSuccessfully": "Бронь успешно снята!",
     "alreadyBooked": "Этот элемент уже забронирован",

@@ -120,6 +120,7 @@
     "message": "Message (Optional)",
     "messagePlaceholder": "Add a message...",
     "messageOptional": "Add a message for the wishlist owner",
+    "addedSuccessfully": "Item added",
     "bookedSuccessfully": "Item booked successfully!",
     "unbookedSuccessfully": "Item unbooked successfully!",
     "alreadyBooked": "This item is already booked",

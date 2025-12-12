@@ -379,7 +379,7 @@
       newItemDescription = "";
       addingItem = false;
       await loadWishlist();
-      showSuccessAlert($_("common.add"), undefined, "bottom-center");
+      showSuccessAlert($_("items.addedSuccessfully"), undefined, "bottom-center");
     } catch (e) {
       console.warn("add item failed", e);
       showInfoAlert($_("items.failedToAdd"), undefined, "bottom-center");
@@ -428,7 +428,6 @@
     <div class="flex flex-col items-center gap-6 py-10 text-center">
       <div class="flex flex-col items-center gap-3">
         <WiliLogo className="h-14 w-auto" />
-        <h1 class="text-2xl font-semibold tracking-tight">Wili</h1>
         <p class="text-muted-foreground max-w-sm text-sm leading-relaxed">
           {#if $authStore.token}
             {$_("tgapp.homeCreatePrompt", { values: { name: $authStore.user?.displayName || "" } })}
@@ -636,14 +635,14 @@
                     </div>
                   {/if}
                 </div>
-                {#if listId && getBookingToken(listId, item.id)}
+                {#if !isOwner() && listId && getBookingToken(listId, item.id)}
                   <Button size="sm" variant="outline" onclick={() => unbook(item)}>
                     <XIcon class="mr-2 h-4 w-4" />
                     {$_("common.cancel")}
                   </Button>
                 {/if}
               </div>
-            {:else if bookingItemId === item.id}
+            {:else if !isOwner() && bookingItemId === item.id}
               <div class="space-y-3 px-1 py-1">
                 <label class="flex items-center gap-2 text-sm">
                   {#if defaultName}
@@ -678,7 +677,7 @@
                   </Button>
                 </div>
               </div>
-            {:else}
+            {:else if !isOwner()}
               <Button class="w-full gap-2" onclick={() => startBooking(item.id)}>
                 <ShieldOffIcon class="h-4 w-4" />
                 {$_("items.bookItem")}
