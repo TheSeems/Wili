@@ -104,7 +104,7 @@ WEBHOOK_URL="https://tg.wili.me/webhook"
 # Note: TELEGRAM_BOT_TOKEN and WEBHOOK_SECRET_TOKEN are already in plain text from GitHub secrets
 WEBHOOK_RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
   -H "Content-Type: application/json" \
-  -d "{\"url\":\"${WEBHOOK_URL}\",\"secret_token\":\"${WEBHOOK_SECRET_TOKEN}\"}")
+  -d "{\"url\":\"${WEBHOOK_URL}\",\"secret_token\":\"${WEBHOOK_SECRET_TOKEN}\",\"allowed_updates\":[\"message\",\"inline_query\"]}")
 
 if echo "$WEBHOOK_RESPONSE" | grep -q '"ok":true'; then
   echo -e "${GREEN}✅ Telegram webhook set successfully${NC}"

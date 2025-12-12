@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -209,13 +210,31 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 
 	listID := parseInlineQueryListID(q.Query)
 	if listID == "" {
-		return b.answerInlineQuery(ctx, q.ID, nil)
+		help := map[string]interface{}{
+			"type":        "article",
+			"id":          "help",
+			"title":       "Как поделиться вишлистом",
+			"description": "Формат: wishlist:<uuid>",
+			"input_message_content": map[string]interface{}{
+				"message_text": "Введите запрос в формате: wishlist:<uuid>",
+			},
+		}
+		return b.answerInlineQuery(ctx, q.ID, []interface{}{help})
 	}
 
 	wl, err := b.fetchWishlist(ctx, listID)
 	if err != nil {
 		log.Printf("inline query wishlist fetch failed: list=%s err=%v", listID, err)
-		return b.answerInlineQuery(ctx, q.ID, nil)
+		errCard := map[string]interface{}{
+			"type":        "article",
+			"id":          "error",
+			"title":       "Не удалось загрузить вишлист",
+			"description": "Проверьте id и попробуйте снова",
+			"input_message_content": map[string]interface{}{
+				"message_text": "Не удалось загрузить вишлист. Проверьте id и попробуйте снова.",
+			},
+		}
+		return b.answerInlineQuery(ctx, q.ID, []interface{}{errCard})
 	}
 
 	totalItems := len(wl.Items)
@@ -249,6 +268,9 @@ func (b *bot) handleInlineQuery(ctx context.Context, q *telegramInlineQuery) err
 }
 
 func (b *bot) answerInlineQuery(ctx context.Context, inlineQueryID string, results []interface{}) error {
+	if results == nil {
+		results = make([]interface{}, 0)
+	}
 	reqBody := answerInlineQueryRequest{
 		InlineQueryID: inlineQueryID,
 		Results:       results,
@@ -273,7 +295,8 @@ func (b *bot) answerInlineQuery(ctx context.Context, inlineQueryID string, resul
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("telegram answerInlineQuery status %d", resp.StatusCode)
+		bb, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("telegram answerInlineQuery status %d body=%s", resp.StatusCode, strings.TrimSpace(string(bb)))
 	}
 	return nil
 }

@@ -56,7 +56,7 @@ func (p *pgRepo) migrate() error {
 		display_name TEXT NOT NULL,
 		avatar_url TEXT,
 		email TEXT UNIQUE,
-		telegram_id BIGINT UNIQUE
+		telegram_id BIGINT
 	);`
 	if _, err := p.db.Exec(query); err != nil {
 		return err
