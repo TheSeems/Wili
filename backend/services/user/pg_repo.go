@@ -88,7 +88,7 @@ func (p *pgRepo) UpsertWithEmail(ctx context.Context, u *usergen.User, email str
 func (p *pgRepo) UpsertWithTelegramID(ctx context.Context, u *usergen.User, telegramID int64) error {
 	_, err := p.db.ExecContext(ctx, `INSERT INTO users (id, display_name, avatar_url, telegram_id)
 		VALUES ($1,$2,$3,$4)
-		ON CONFLICT (telegram_id) DO UPDATE SET
+		ON CONFLICT (telegram_id) WHERE telegram_id IS NOT NULL DO UPDATE SET
 			display_name=EXCLUDED.display_name, avatar_url=EXCLUDED.avatar_url`,
 		u.Id, u.DisplayName, u.AvatarUrl, telegramID)
 	return err
