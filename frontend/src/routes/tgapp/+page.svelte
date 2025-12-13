@@ -36,6 +36,7 @@
     PlusIcon,
     SendIcon,
     TrashIcon,
+    ArrowLeftIcon,
   } from "@lucide/svelte";
 
   type Wishlist = components["schemas"]["Wishlist"];
@@ -486,6 +487,16 @@
       creatingWishlist = false;
     }
   }
+
+  function goBackToList() {
+    listId = null;
+    wishlist = null;
+    editingWishlist = false;
+    addingItem = false;
+    editingItemId = null;
+    bookingItemId = null;
+    void loadMyWishlists();
+  }
 </script>
 
 <svelte:head>
@@ -576,8 +587,12 @@
       </a>
     </div>
   {:else if wishlist}
-    {#if telegramLoginAvailable && !$authStore.token}
-      <div class="flex items-center justify-end">
+    <div class="flex items-center justify-between gap-2">
+      <Button variant="ghost" onclick={goBackToList} class="gap-2">
+        <ArrowLeftIcon class="h-4 w-4" />
+        {$_("common.back")}
+      </Button>
+      {#if telegramLoginAvailable && !$authStore.token}
         <Button
           variant="outline"
           disabled={telegramLoginLoading}
@@ -585,8 +600,8 @@
         >
           {telegramLoginLoading ? $_("common.loading") : $_("auth.loginWithTelegram")}
         </Button>
-      </div>
-    {/if}
+      {/if}
+    </div>
     <div class="flex w-full flex-wrap items-center justify-center gap-2">
       <Button variant="outline" onclick={shareWishlistToTelegram} class="gap-2">
         <SendIcon class="h-4 w-4" />
