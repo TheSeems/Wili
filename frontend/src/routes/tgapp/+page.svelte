@@ -67,6 +67,7 @@
   let savingItem = $state(false);
   let deletingItemId = $state<string | null>(null);
   let deletingWishlist = $state(false);
+  const telegramBotUsername = env.PUBLIC_TELEGRAM_BOT_USERNAME;
 
   function parseListId(): string | null {
     if (typeof window === "undefined") return null;
@@ -377,10 +378,14 @@
       }
     }
 
-    const shareUrl = `${window.location.origin}/wishlists/${wishlist.id}`;
-    const text = `Wishlist: ${wishlist.title || ""}`.trim();
-    const tgShare = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`;
-    window.open(tgShare, "_blank", "noopener");
+    if (telegramBotUsername) {
+      const link = `https://t.me/${telegramBotUsername}?start=share_${wishlist.id}`;
+      if (tg?.openTelegramLink) {
+        tg.openTelegramLink(link);
+        return;
+      }
+      window.open(link, "_blank", "noopener");
+    }
   }
 
   async function deleteWishlist() {

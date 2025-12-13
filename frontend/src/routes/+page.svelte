@@ -10,10 +10,16 @@
   import { _, isLoading as i18nLoading } from "svelte-i18n";
   import T from "$lib/components/T.svelte";
   import WiliLogo from "$lib/components/WiliLogo.svelte";
+  import { wishlistApi } from "$lib/api/wishlist-client";
+  import type { components } from "$lib/api/generated/wishlist-api";
 
   $: ({ token, user, isLoading, justLoggedIn } = $authStore);
   let telegramLoginAvailable = false;
   let telegramInitData: string = "";
+  type Wishlist = components["schemas"]["Wishlist"];
+  let myWishlists: Wishlist[] = [];
+  let wishlistsLoading = false;
+  let wishlistsError: string | null = null;
 
   $: if (justLoggedIn && user) {
     makeAlert({
@@ -64,6 +70,23 @@
     }
     telegramLoginAvailable = Boolean(telegramInitData);
   });
+
+  $: if (browser && token) {
+    void (async () => {
+      if (wishlistsLoading) return;
+      wishlistsLoading = true;
+      wishlistsError = null;
+      try {
+        const data = await wishlistApi.getWishlists(token);
+        myWishlists = data.wishlists || [];
+      } catch (e) {
+        console.warn("failed to load wishlists", e);
+        wishlistsError = $_("wishlists.failedToLoad");
+      } finally {
+        wishlistsLoading = false;
+      }
+    })();
+  }
 </script>
 
 <section class="flex h-[80vh] flex-col items-center justify-center px-4 py-10">
@@ -87,10 +110,44 @@
 
     {#if token && user}
       <div class="mt-8 flex flex-col items-center gap-4">
-        <Button href="/wishlists" class="flex items-center gap-2">
-          <ListIcon class="h-4 w-4" />
-          <T key="nav.wishlists" fallback="My Wishlists" />
-        </Button>
+        {#if wishlistsLoading}
+          <p class="text-muted-foreground text-sm">
+            <T key="common.loading" fallback="Loading..." />
+          </p>
+        {:else if wishlistsError}
+          <p class="text-muted-foreground text-sm">{wishlistsError}</p>
+          <Button href="/wishlists" class="flex items-center gap-2">
+            <ListIcon class="h-4 w-4" />
+            <T key="nav.wishlists" fallback="My Wishlists" />
+          </Button>
+        {:else if myWishlists.length === 0}
+          <p class="text-muted-foreground text-sm">
+            <T key="wishlists.noWishlists" fallback="No wishlists yet" />
+          </p>
+          <Button href="/wishlists" class="flex items-center gap-2">
+            <ListIcon class="h-4 w-4" />
+            <T key="wishlists.createWishlist" fallback="Create New Wishlist" />
+          </Button>
+        {:else}
+          <div class="w-full max-w-md space-y-2">
+            {#each myWishlists.slice(0, 5) as w}
+              <a
+                class="border-border hover:bg-muted flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left"
+                href={`/wishlists/${w.id}`}
+              >
+                <span class="truncate font-medium">{w.title}</span>
+                <span class="text-muted-foreground ml-3 text-sm">
+                  {w.items?.length || 0}
+                  <T key="wishlists.items" fallback="items" />
+                </span>
+              </a>
+            {/each}
+          </div>
+          <Button href="/wishlists" class="flex items-center gap-2">
+            <ListIcon class="h-4 w-4" />
+            <T key="nav.wishlists" fallback="My Wishlists" />
+          </Button>
+        {/if}
       </div>
     {:else}
       {#if telegramLoginAvailable}
