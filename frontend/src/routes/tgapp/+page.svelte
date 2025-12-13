@@ -357,7 +357,7 @@
       );
       await loadWishlist();
       cancelEditingItem();
-      showSuccessAlert($_("common.save"), undefined, "bottom-center");
+      showSuccessAlert($_("common.saved"), undefined, "bottom-center");
     } catch (e) {
       console.warn("update item failed", e);
       showInfoAlert($_("items.failedToUpdate"), undefined, "bottom-center");
@@ -373,7 +373,7 @@
       await wishlistApi.deleteWishlistItem(wishlist.id, item.id, $authStore.token);
       await loadWishlist();
       if (editingItemId === item.id) cancelEditingItem();
-      showSuccessAlert($_("common.delete"), undefined, "bottom-center");
+      showSuccessAlert($_("common.deleted"), undefined, "bottom-center");
     } catch (e) {
       console.warn("delete item failed", e);
       showInfoAlert($_("items.failedToDelete"), undefined, "bottom-center");
@@ -391,7 +391,7 @@
         $authStore.token
       );
       editingWishlist = false;
-      showSuccessAlert($_("common.save"), undefined, "bottom-center");
+      showSuccessAlert($_("common.saved"), undefined, "bottom-center");
     } catch (e) {
       console.warn("wishlist update failed", e);
       showInfoAlert($_("wishlists.failedToUpdate"), undefined, "bottom-center");
@@ -645,12 +645,12 @@
       {:else}
         <div class="flex items-start justify-between gap-2">
           <p class="text-xl font-semibold">{wishlist.title}</p>
-          <div class="mt-0.5 flex shrink-0 items-center gap-1">
+          <div class="flex shrink-0 items-center">
             {#if isOwner()}
               <button
                 type="button"
                 onclick={() => (editingWishlist = true)}
-                class="text-muted-foreground hover:text-foreground rounded p-1"
+                class="text-muted-foreground hover:text-foreground flex h-8 w-8 items-center justify-center rounded"
               >
                 <EditIcon class="h-4 w-4" />
               </button>
@@ -658,7 +658,7 @@
             <button
               type="button"
               onclick={shareWishlistToTelegram}
-              class="text-muted-foreground hover:text-foreground rounded p-1"
+              class="text-muted-foreground hover:text-foreground flex h-8 w-8 items-center justify-center rounded"
             >
               <SendIcon class="h-4 w-4" />
             </button>
@@ -667,7 +667,7 @@
                 <DropdownMenuTrigger>
                   <button
                     type="button"
-                    class="text-muted-foreground hover:text-foreground rounded p-1"
+                    class="text-muted-foreground hover:text-foreground flex h-8 w-8 items-center justify-center rounded"
                   >
                     <EllipsisVerticalIcon class="h-4 w-4" />
                   </button>
