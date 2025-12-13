@@ -68,6 +68,10 @@
   let deletingItemId = $state<string | null>(null);
   let deletingWishlist = $state(false);
   const telegramBotUsername = env.PUBLIC_TELEGRAM_BOT_USERNAME;
+  let myWishlists: Wishlist[] = $state([]);
+  let myWishlistsLoading = $state(false);
+  let myWishlistsError = $state<string | null>(null);
+  let myWishlistsToken = $state<string | null>(null);
 
   function parseListId(): string | null {
     if (typeof window === "undefined") return null;
@@ -114,6 +118,24 @@
       error = $_("tgapp.loadError");
     } finally {
       loading = false;
+    }
+  }
+
+  async function loadMyWishlists() {
+    if (!$authStore.token) return;
+    if (myWishlistsLoading) return;
+    if (myWishlistsToken === $authStore.token) return;
+    myWishlistsLoading = true;
+    myWishlistsError = null;
+    try {
+      const data = await wishlistApi.getWishlists($authStore.token);
+      myWishlists = data.wishlists || [];
+      myWishlistsToken = $authStore.token;
+    } catch (e) {
+      console.warn("failed to load wishlists", e);
+      myWishlistsError = $_("wishlists.failedToLoad");
+    } finally {
+      myWishlistsLoading = false;
     }
   }
 
@@ -275,10 +297,17 @@
 
       loading = false;
       error = null;
+      if ($authStore.token) void loadMyWishlists();
       return;
     }
 
     loadWishlist();
+  });
+
+  $effect(() => {
+    if (!listId && $authStore.token) {
+      void loadMyWishlists();
+    }
   });
 
   function isOwner(): boolean {
@@ -506,6 +535,35 @@
           </Button>
         {/if}
       </div>
+
+      {#if $authStore.token}
+        <div class="w-full max-w-sm space-y-2 text-left">
+          {#if myWishlistsLoading}
+            <div class="text-muted-foreground text-center text-sm">{$_("common.loading")}</div>
+          {:else if myWishlistsError}
+            <div class="text-muted-foreground text-center text-sm">{myWishlistsError}</div>
+          {:else if myWishlists.length > 0}
+            {#each myWishlists.slice(0, 8) as w}
+              <button
+                type="button"
+                class="border-border hover:bg-muted flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left"
+                onclick={() => {
+                  listId = w.id;
+                  wishlist = null;
+                  void loadWishlist();
+                }}
+              >
+                <span class="truncate font-medium">{w.title}</span>
+                <span class="text-muted-foreground ml-3 text-sm">{w.items?.length || 0}</span>
+              </button>
+            {/each}
+          {:else}
+            <div class="text-muted-foreground text-center text-sm">
+              {$_("wishlists.noWishlists")}
+            </div>
+          {/if}
+        </div>
+      {/if}
 
       <a
         class="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm"
