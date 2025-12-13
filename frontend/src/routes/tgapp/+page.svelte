@@ -612,7 +612,7 @@
         </Button>
       {/if}
     </div>
-    <div class="flex w-full items-center justify-center gap-2">
+    <div class="flex flex-wrap items-center justify-center gap-2">
       <Button variant="outline" onclick={shareWishlistToTelegram} class="gap-2">
         <SendIcon class="h-4 w-4" />
         {$_("wishlists.shareToTelegram")}
@@ -630,14 +630,6 @@
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              onclick={() => (editingWishlist = true)}
-              disabled={editingWishlist}
-              class="gap-2"
-            >
-              <EditIcon class="h-4 w-4" />
-              {$_("common.edit")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
               onclick={deleteWishlist}
               disabled={deletingWishlist}
               class="text-destructive gap-2"
@@ -649,45 +641,69 @@
         </DropdownMenu>
       {/if}
     </div>
-    <div class="p-0">
-      <div class="flex items-start justify-between gap-3">
-        <div class="space-y-2">
-          {#if editingWishlist && isOwner()}
-            <div class="space-y-3">
-              <Input bind:value={editTitle} class="text-lg font-semibold" />
-              <Textarea bind:value={editDescription} />
-              <div class="flex gap-2">
-                <Button onclick={saveWishlistEdits} class="gap-2">
-                  <SaveIcon class="h-4 w-4" />
-                  {$_("common.save")}
-                </Button>
-                <Button
-                  variant="outline"
-                  onclick={() => {
-                    editingWishlist = false;
-                    editTitle = wishlist?.title || "";
-                    editDescription = wishlist?.description || "";
-                  }}
-                >
-                  {$_("common.cancel")}
-                </Button>
-              </div>
-            </div>
-          {:else}
-            <p class="text-xl font-semibold">{wishlist.title}</p>
-            {#if wishlist.description}
-              <ExpandableText
-                content={wishlist.description}
-                className="text-sm text-muted-foreground"
-                maxHeight={200}
-                useResponsive={false}
-                allowYandexMarket={false}
-                smallOverflowThreshold={0}
-              />
-            {/if}
+
+    <div class="space-y-2">
+      {#if editingWishlist && isOwner()}
+        <div class="space-y-3">
+          <input
+            type="text"
+            bind:value={editTitle}
+            class="border-input bg-background w-full rounded-md border px-3 py-2 text-lg font-semibold outline-none focus:ring-2 focus:ring-ring"
+          />
+          <textarea
+            bind:value={editDescription}
+            rows="3"
+            class="border-input bg-background w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+          ></textarea>
+          <div class="flex gap-2">
+            <Button onclick={saveWishlistEdits} class="gap-2">
+              <SaveIcon class="h-4 w-4" />
+              {$_("common.save")}
+            </Button>
+            <Button
+              variant="outline"
+              onclick={() => {
+                editingWishlist = false;
+                editTitle = wishlist?.title || "";
+                editDescription = wishlist?.description || "";
+              }}
+            >
+              {$_("common.cancel")}
+            </Button>
+          </div>
+        </div>
+      {:else}
+        <div class="flex items-start gap-2">
+          <p class="text-xl font-semibold">{wishlist.title}</p>
+          {#if isOwner()}
+            <button
+              type="button"
+              onclick={() => (editingWishlist = true)}
+              class="text-muted-foreground hover:text-foreground mt-1 shrink-0"
+            >
+              <EditIcon class="h-4 w-4" />
+            </button>
           {/if}
         </div>
-      </div>
+        {#if wishlist.description}
+          <ExpandableText
+            content={wishlist.description}
+            className="text-sm text-muted-foreground"
+            maxHeight={200}
+            useResponsive={false}
+            allowYandexMarket={false}
+            smallOverflowThreshold={0}
+          />
+        {:else if isOwner()}
+          <button
+            type="button"
+            onclick={() => (editingWishlist = true)}
+            class="text-muted-foreground hover:text-foreground text-sm italic"
+          >
+            {$_("wishlists.descriptionPlaceholder")}
+          </button>
+        {/if}
+      {/if}
     </div>
 
     {#if isOwner() && addingItem}
