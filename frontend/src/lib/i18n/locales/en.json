@@ -156,6 +156,7 @@
     "createWishlist": "Create wishlist",
     "openMyWishlists": "Open my wishlists",
     "wishlistCreated": "Wishlist created",
+    "wishlistDeleted": "Wishlist deleted",
     "openFromChat": "Open a wishlist using a link from chat.",
     "openWiliWeb": "Open wili.me",
     "bookFailed": "Failed to book",

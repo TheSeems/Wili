@@ -34,6 +34,7 @@
     EditIcon,
     SaveIcon,
     PlusIcon,
+    SendIcon,
     TrashIcon,
   } from "@lucide/svelte";
 
@@ -65,6 +66,7 @@
   let editItemDescription = $state("");
   let savingItem = $state(false);
   let deletingItemId = $state<string | null>(null);
+  let deletingWishlist = $state(false);
 
   function parseListId(): string | null {
     if (typeof window === "undefined") return null;
@@ -358,6 +360,50 @@
     }
   }
 
+  function shareWishlistToTelegram() {
+    if (!wishlist) return;
+    const tg = (window as any)?.Telegram?.WebApp;
+    if (tg?.switchInlineQuery) {
+      try {
+        tg.switchInlineQuery(`wishlist:${wishlist.id}`, [
+          "users",
+          "groups",
+          "supergroups",
+          "channels",
+        ]);
+        return;
+      } catch (e) {
+        console.warn("Telegram switchInlineQuery failed", e);
+      }
+    }
+
+    const shareUrl = `${window.location.origin}/wishlists/${wishlist.id}`;
+    const text = `Wishlist: ${wishlist.title || ""}`.trim();
+    const tgShare = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`;
+    window.open(tgShare, "_blank", "noopener");
+  }
+
+  async function deleteWishlist() {
+    if (!wishlist || !$authStore.token) return;
+    if (!confirm($_("wishlists.confirmDelete"))) return;
+    deletingWishlist = true;
+    try {
+      await wishlistApi.deleteWishlist(wishlist.id, $authStore.token);
+      wishlist = null;
+      listId = null;
+      editingWishlist = false;
+      addingItem = false;
+      editingItemId = null;
+      bookingItemId = null;
+      showSuccessAlert($_("tgapp.wishlistDeleted"), undefined, "bottom-center");
+    } catch (e) {
+      console.warn("wishlist delete failed", e);
+      showInfoAlert($_("wishlists.failedToDelete"), undefined, "bottom-center");
+    } finally {
+      deletingWishlist = false;
+    }
+  }
+
   async function addItem() {
     if (!wishlist || !$authStore.token) return;
     const name = newItemName.trim();
@@ -478,8 +524,12 @@
         </Button>
       </div>
     {/if}
-    {#if isOwner() && !editingWishlist}
-      <div class="flex w-full items-center justify-center gap-2">
+    <div class="flex w-full flex-wrap items-center justify-center gap-2">
+      <Button variant="outline" onclick={shareWishlistToTelegram} class="gap-2">
+        <SendIcon class="h-4 w-4" />
+        {$_("wishlists.shareToTelegram")}
+      </Button>
+      {#if isOwner() && !editingWishlist}
         <Button variant="outline" onclick={() => (addingItem = !addingItem)} class="gap-2">
           <PlusIcon class="h-4 w-4" />
           {$_("wishlists.addItem")}
@@ -488,8 +538,17 @@
           <EditIcon class="h-4 w-4" />
           {$_("common.edit")}
         </Button>
-      </div>
-    {/if}
+        <Button
+          variant="outline"
+          disabled={deletingWishlist}
+          onclick={deleteWishlist}
+          class="text-destructive gap-2"
+        >
+          <TrashIcon class="h-4 w-4" />
+          {$_("wishlists.deleteWishlist")}
+        </Button>
+      {/if}
+    </div>
     <div class="p-0">
       <div class="flex items-start justify-between gap-3">
         <div class="space-y-2">
