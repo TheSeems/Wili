@@ -13,6 +13,12 @@
     CardHeader,
     CardTitle,
   } from "$lib/components/ui/card";
+  import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+  } from "$lib/components/ui/dropdown-menu";
   import ExpandableText from "$lib/components/ExpandableText.svelte";
   import { Textarea } from "$lib/components/ui/textarea";
   import { Input } from "$lib/components/ui/input";
@@ -37,6 +43,7 @@
     SendIcon,
     TrashIcon,
     ArrowLeftIcon,
+    EllipsisVerticalIcon,
   } from "@lucide/svelte";
 
   type Wishlist = components["schemas"]["Wishlist"];
@@ -430,6 +437,8 @@
       addingItem = false;
       editingItemId = null;
       bookingItemId = null;
+      myWishlistsToken = null;
+      void loadMyWishlists();
       showSuccessAlert($_("tgapp.wishlistDeleted"), undefined, "bottom-center");
     } catch (e) {
       console.warn("wishlist delete failed", e);
@@ -495,6 +504,7 @@
     addingItem = false;
     editingItemId = null;
     bookingItemId = null;
+    myWishlistsToken = null;
     void loadMyWishlists();
   }
 </script>
@@ -602,29 +612,41 @@
         </Button>
       {/if}
     </div>
-    <div class="flex w-full flex-wrap items-center justify-center gap-2">
+    <div class="flex w-full items-center justify-center gap-2">
       <Button variant="outline" onclick={shareWishlistToTelegram} class="gap-2">
         <SendIcon class="h-4 w-4" />
         {$_("wishlists.shareToTelegram")}
       </Button>
-      {#if isOwner() && !editingWishlist}
+      {#if isOwner()}
         <Button variant="outline" onclick={() => (addingItem = !addingItem)} class="gap-2">
           <PlusIcon class="h-4 w-4" />
           {$_("wishlists.addItem")}
         </Button>
-        <Button variant="outline" onclick={() => (editingWishlist = true)} class="gap-2">
-          <EditIcon class="h-4 w-4" />
-          {$_("common.edit")}
-        </Button>
-        <Button
-          variant="outline"
-          disabled={deletingWishlist}
-          onclick={deleteWishlist}
-          class="text-destructive gap-2"
-        >
-          <TrashIcon class="h-4 w-4" />
-          {$_("wishlists.deleteWishlist")}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            <Button variant="outline" size="icon">
+              <EllipsisVerticalIcon class="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onclick={() => (editingWishlist = true)}
+              disabled={editingWishlist}
+              class="gap-2"
+            >
+              <EditIcon class="h-4 w-4" />
+              {$_("common.edit")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onclick={deleteWishlist}
+              disabled={deletingWishlist}
+              class="text-destructive gap-2"
+            >
+              <TrashIcon class="h-4 w-4" />
+              {$_("wishlists.deleteWishlist")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       {/if}
     </div>
     <div class="p-0">
