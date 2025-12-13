@@ -612,36 +612,6 @@
         </Button>
       {/if}
     </div>
-    <div class="flex flex-wrap items-center justify-center gap-2">
-      <Button variant="outline" onclick={shareWishlistToTelegram} class="gap-2">
-        <SendIcon class="h-4 w-4" />
-        {$_("wishlists.shareToTelegram")}
-      </Button>
-      {#if isOwner()}
-        <Button variant="outline" onclick={() => (addingItem = !addingItem)} class="gap-2">
-          <PlusIcon class="h-4 w-4" />
-          {$_("wishlists.addItem")}
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button variant="outline" size="icon">
-              <EllipsisVerticalIcon class="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onclick={deleteWishlist}
-              disabled={deletingWishlist}
-              class="text-destructive gap-2"
-            >
-              <TrashIcon class="h-4 w-4" />
-              {$_("wishlists.deleteWishlist")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      {/if}
-    </div>
-
     <div class="space-y-2">
       {#if editingWishlist && isOwner()}
         <div class="space-y-3">
@@ -673,17 +643,48 @@
           </div>
         </div>
       {:else}
-        <div class="flex items-start gap-2">
+        <div class="flex items-start justify-between gap-2">
           <p class="text-xl font-semibold">{wishlist.title}</p>
-          {#if isOwner()}
+          <div class="mt-0.5 flex shrink-0 items-center gap-1">
+            {#if isOwner()}
+              <button
+                type="button"
+                onclick={() => (editingWishlist = true)}
+                class="text-muted-foreground hover:text-foreground rounded p-1"
+              >
+                <EditIcon class="h-4 w-4" />
+              </button>
+            {/if}
             <button
               type="button"
-              onclick={() => (editingWishlist = true)}
-              class="text-muted-foreground hover:text-foreground mt-1 shrink-0"
+              onclick={shareWishlistToTelegram}
+              class="text-muted-foreground hover:text-foreground rounded p-1"
             >
-              <EditIcon class="h-4 w-4" />
+              <SendIcon class="h-4 w-4" />
             </button>
-          {/if}
+            {#if isOwner()}
+              <DropdownMenu>
+                <DropdownMenuTrigger>
+                  <button
+                    type="button"
+                    class="text-muted-foreground hover:text-foreground rounded p-1"
+                  >
+                    <EllipsisVerticalIcon class="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onclick={deleteWishlist}
+                    disabled={deletingWishlist}
+                    class="text-destructive gap-2"
+                  >
+                    <TrashIcon class="h-4 w-4" />
+                    {$_("wishlists.deleteWishlist")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            {/if}
+          </div>
         </div>
         {#if wishlist.description}
           <ExpandableText
@@ -705,30 +706,6 @@
         {/if}
       {/if}
     </div>
-
-    {#if isOwner() && addingItem}
-      <Card>
-        <CardHeader>
-          <CardTitle>{$_("wishlists.addNewItem")}</CardTitle>
-        </CardHeader>
-        <CardContent class="flex flex-col gap-3">
-          <Input placeholder={$_("items.namePlaceholder")} bind:value={newItemName} />
-          <Textarea
-            placeholder={$_("items.descriptionPlaceholder")}
-            bind:value={newItemDescription}
-          />
-          <div class="flex gap-2">
-            <Button onclick={addItem} disabled={!newItemName.trim()} class="gap-2">
-              <PlusIcon class="h-4 w-4" />
-              {$_("common.add")}
-            </Button>
-            <Button variant="outline" onclick={() => (addingItem = false)}>
-              {$_("common.cancel")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    {/if}
 
     <div class="grid gap-4 md:grid-cols-2">
       {#each wishlist.items || [] as item}
@@ -863,7 +840,42 @@
       {/each}
     </div>
 
-    <div class="text-muted-foreground mt-6 flex justify-center text-sm">
+    {#if isOwner()}
+      {#if addingItem}
+        <Card>
+          <CardHeader>
+            <CardTitle>{$_("wishlists.addNewItem")}</CardTitle>
+          </CardHeader>
+          <CardContent class="flex flex-col gap-3">
+            <Input placeholder={$_("items.namePlaceholder")} bind:value={newItemName} />
+            <Textarea
+              placeholder={$_("items.descriptionPlaceholder")}
+              bind:value={newItemDescription}
+            />
+            <div class="flex gap-2">
+              <Button onclick={addItem} disabled={!newItemName.trim()} class="gap-2">
+                <PlusIcon class="h-4 w-4" />
+                {$_("common.add")}
+              </Button>
+              <Button variant="outline" onclick={() => (addingItem = false)}>
+                {$_("common.cancel")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      {:else}
+        <Button
+          variant="outline"
+          onclick={() => (addingItem = true)}
+          class="w-full gap-2"
+        >
+          <PlusIcon class="h-4 w-4" />
+          {$_("wishlists.addItem")}
+        </Button>
+      {/if}
+    {/if}
+
+    <div class="text-muted-foreground mt-2 flex justify-center text-sm">
       <a
         class="hover:text-foreground inline-flex items-center gap-2"
         href={wishlist ? `${window.location.origin}/wishlists/${wishlist.id}` : "#"}
