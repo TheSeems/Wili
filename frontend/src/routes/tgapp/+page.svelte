@@ -4,7 +4,7 @@
   import { env } from "$env/dynamic/public";
   import type { components } from "$lib/api/generated/wishlist-api";
   import { wishlistApi } from "$lib/api/wishlist-client";
-  import { _ } from "svelte-i18n";
+  import { _, locale } from "svelte-i18n";
   import { Button } from "$lib/components/ui/button";
   import {
     Card,
@@ -44,6 +44,7 @@
     TrashIcon,
     ArrowLeftIcon,
     EllipsisVerticalIcon,
+    EyeIcon,
   } from "@lucide/svelte";
 
   type Wishlist = components["schemas"]["Wishlist"];
@@ -75,6 +76,7 @@
   let savingItem = $state(false);
   let deletingItemId = $state<string | null>(null);
   let deletingWishlist = $state(false);
+  let revealedBookings = $state<Set<string>>(new Set());
   const telegramBotUsername = env.PUBLIC_TELEGRAM_BOT_USERNAME;
   let myWishlists: Wishlist[] = $state([]);
   let myWishlistsLoading = $state(false);
@@ -204,6 +206,7 @@
     first_name?: string;
     last_name?: string;
     username?: string;
+    language_code?: string;
   } | null {
     try {
       const hash = window.location.hash?.replace(/^#/, "");
@@ -234,6 +237,16 @@
     }
   }
 
+  function setLocaleFromTelegram(langCode: string | undefined) {
+    if (!langCode) return;
+    const code = langCode.toLowerCase();
+    if (code.startsWith("ru")) {
+      locale.set("ru");
+    } else if (code.startsWith("en")) {
+      locale.set("en");
+    }
+  }
+
   async function loginWithTelegram(showFeedback: boolean) {
     if (!telegramInitData) return;
     telegramLoginLoading = true;
@@ -261,6 +274,7 @@
       tg.setBottomBarColor?.("bg_color");
       const user = tg.initDataUnsafe?.user;
       setDefaultNameFromUser(user);
+      setLocaleFromTelegram(user?.language_code);
 
       const fromSdk = (tg.initData as string | undefined) || "";
       if (fromSdk) {
@@ -279,6 +293,7 @@
     if (!defaultName) {
       const hashUser = extractUserFromHash();
       setDefaultNameFromUser(hashUser);
+      setLocaleFromTelegram(hashUser?.language_code);
     }
     if (!defaultName) {
       anonymous = true;
@@ -321,6 +336,16 @@
   function isOwner(): boolean {
     if (!wishlist) return false;
     return Boolean($authStore.token && $authStore.user && wishlist.userId === $authStore.user.id);
+  }
+
+  function revealBooking(itemId: string) {
+    if (!confirm($_("items.confirmReveal"))) return;
+    revealedBookings.add(itemId);
+    revealedBookings = new Set(revealedBookings);
+  }
+
+  function isBookingRevealed(itemId: string): boolean {
+    return revealedBookings.has(itemId);
   }
 
   function startEditingItem(item: WishlistItem) {
@@ -773,27 +798,56 @@
                 </div>
               </div>
             {:else if item.booking}
-              <div
-                class="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-sm text-green-700 dark:text-green-300"
-              >
-                <div class="flex flex-col gap-1">
-                  <div class="flex items-center gap-2">
-                    <CheckIcon class="h-4 w-4 shrink-0" />
-                    <span>{$_("tgapp.alreadyBooked")}</span>
-                  </div>
-                  {#if item.booking.bookerName}
-                    <div class="text-sm text-green-700/80 dark:text-green-200/80">
-                      {item.booking.bookerName}
+              {#if isOwner()}
+                {#if isBookingRevealed(item.id)}
+                  <div
+                    class="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-sm text-green-700 dark:text-green-300"
+                  >
+                    <div class="flex flex-col gap-1">
+                      <div class="flex items-center gap-2">
+                        <CheckIcon class="h-4 w-4 shrink-0" />
+                        <span>{$_("tgapp.alreadyBooked")}</span>
+                      </div>
+                      {#if item.booking.bookerName}
+                        <div class="text-sm text-green-700/80 dark:text-green-200/80">
+                          {item.booking.bookerName}
+                        </div>
+                      {/if}
                     </div>
+                  </div>
+                {:else}
+                  <button
+                    type="button"
+                    onclick={() => revealBooking(item.id)}
+                    class="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-2 rounded-md border border-dashed py-2 text-sm"
+                  >
+                    <EyeIcon class="h-4 w-4" />
+                    {$_("items.revealBooking")}
+                  </button>
+                {/if}
+              {:else}
+                <div
+                  class="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-sm text-green-700 dark:text-green-300"
+                >
+                  <div class="flex flex-col gap-1">
+                    <div class="flex items-center gap-2">
+                      <CheckIcon class="h-4 w-4 shrink-0" />
+                      <span>{$_("tgapp.alreadyBooked")}</span>
+                    </div>
+                    {#if item.booking.bookerName}
+                      <div class="text-sm text-green-700/80 dark:text-green-200/80">
+                        {item.booking.bookerName}
+                      </div>
+                    {/if}
+                  </div>
+                  {#if listId && getBookingToken(listId, item.id)}
+                    <Button size="sm" variant="outline" onclick={() => unbook(item)}>
+                      <XIcon class="mr-2 h-4 w-4" />
+                      {$_("common.cancel")}
+                    </Button>
                   {/if}
                 </div>
-                {#if !isOwner() && listId && getBookingToken(listId, item.id)}
-                  <Button size="sm" variant="outline" onclick={() => unbook(item)}>
-                    <XIcon class="mr-2 h-4 w-4" />
-                    {$_("common.cancel")}
-                  </Button>
-                {/if}
-              </div>
+              {/if}
             {:else if !isOwner() && bookingItemId === item.id}
               <div class="space-y-3 px-1 py-1">
                 <label class="flex items-center gap-2 text-sm">
