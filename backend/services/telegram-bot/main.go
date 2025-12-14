@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -111,6 +110,7 @@ type config struct {
 	userAPIBase  string
 	webAppURL    string
 	webFallback  string
+	frontendURL  string
 	miniAppBot   string
 	miniAppName  string
 	bindAddr     string
@@ -127,12 +127,15 @@ func mustEnv(key string) string {
 }
 
 func loadConfig() config {
+	webFallback := strings.TrimRight(mustEnv("WISHES_WEB_URL"), "/")
+	frontendURL := envOrDefault("FRONTEND_URL", strings.TrimSuffix(webFallback, "/wishlists"))
 	return config{
 		botToken:     mustEnv("TELEGRAM_BOT_TOKEN"),
 		apiBaseURL:   strings.TrimRight(mustEnv("WISHLIST_API_BASE_URL"), "/"),
 		userAPIBase:  strings.TrimRight(envOrDefault("USER_API_BASE_URL", "https://api.wili.me"), "/"),
 		webAppURL:    strings.TrimRight(mustEnv("TELEGRAM_WEBAPP_URL"), "/"),
-		webFallback:  strings.TrimRight(mustEnv("WISHES_WEB_URL"), "/"),
+		webFallback:  webFallback,
+		frontendURL:  frontendURL,
 		miniAppBot:   strings.TrimSpace(os.Getenv("TELEGRAM_MINIAPP_BOT_USERNAME")),
 		miniAppName:  strings.TrimSpace(os.Getenv("TELEGRAM_MINIAPP_NAME")),
 		bindAddr:     envOrDefault("BIND_ADDR", ":8080"),
@@ -345,9 +348,9 @@ func (b *bot) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if state, callbackURL, ok := parseWebAuth(startParam); ok {
-		log.Printf("webhook webauth: chat=%d state=%s callback=%s", upd.Message.Chat.ID, state, callbackURL)
-		if err := b.sendWebAuth(ctx, upd.Message.Chat.ID, upd.Message.From.ID, state, callbackURL, upd.Message.From.LanguageCode); err != nil {
+	if state, ok := parseWebAuth(startParam); ok {
+		log.Printf("webhook webauth: chat=%d state=%s", upd.Message.Chat.ID, state)
+		if err := b.sendWebAuth(ctx, upd.Message.Chat.ID, upd.Message.From.ID, state, upd.Message.From.LanguageCode); err != nil {
 			log.Printf("send webauth failed: chat=%d err=%v", upd.Message.Chat.ID, err)
 		}
 		w.WriteHeader(http.StatusOK)
@@ -700,34 +703,15 @@ func parseShareListID(param string) string {
 	return parseListID("list_" + id)
 }
 
-func parseWebAuth(param string) (state string, callbackURL string, ok bool) {
+func parseWebAuth(param string) (state string, ok bool) {
 	if !strings.HasPrefix(param, "webauth_") {
-		return "", "", false
+		return "", false
 	}
-	rest := strings.TrimPrefix(param, "webauth_")
-	parts := strings.SplitN(rest, "_", 2)
-	if len(parts) != 2 {
-		return "", "", false
+	state = strings.TrimPrefix(param, "webauth_")
+	if len(state) < 8 || len(state) > 32 {
+		return "", false
 	}
-	state = parts[0]
-	decoded, err := base64URLDecode(parts[1])
-	if err != nil {
-		return "", "", false
-	}
-	callbackURL = string(decoded)
-	if !strings.HasPrefix(callbackURL, "https://") && !strings.HasPrefix(callbackURL, "http://") {
-		return "", "", false
-	}
-	return state, callbackURL, true
-}
-
-func base64URLDecode(s string) ([]byte, error) {
-	s = strings.ReplaceAll(s, "-", "+")
-	s = strings.ReplaceAll(s, "_", "/")
-	if m := len(s) % 4; m != 0 {
-		s += strings.Repeat("=", 4-m)
-	}
-	return base64.StdEncoding.DecodeString(s)
+	return state, true
 }
 
 func parseInlineQueryListID(query string) string {
@@ -876,7 +860,7 @@ func (b *bot) sendSharePrompt(ctx context.Context, chatID int64, listID string, 
 	return nil
 }
 
-func (b *bot) sendWebAuth(ctx context.Context, chatID int64, telegramID int64, state string, callbackURL string, lang string) error {
+func (b *bot) sendWebAuth(ctx context.Context, chatID int64, telegramID int64, state string, lang string) error {
 	jwt, err := b.fetchTelegramJWT(ctx, telegramID)
 	if err != nil {
 		log.Printf("webauth fetch JWT failed: telegram_id=%d err=%v", telegramID, err)
@@ -904,7 +888,7 @@ func (b *bot) sendWebAuth(ctx context.Context, chatID int64, telegramID int64, s
 		return nil
 	}
 
-	loginURL := fmt.Sprintf("%s?token=%s&state=%s", callbackURL, url.QueryEscape(jwt), url.QueryEscape(state))
+	loginURL := fmt.Sprintf("%s/auth/telegram-callback?token=%s&state=%s", b.cfg.frontendURL, url.QueryEscape(jwt), url.QueryEscape(state))
 
 	text := tr(lang, keyWebAuthText)
 	msg := sendMessageRequest{

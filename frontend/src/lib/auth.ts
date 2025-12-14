@@ -63,21 +63,15 @@ export function redirectToYandex() {
 
 export const TELEGRAM_AUTH_STATE_KEY = "wili_tg_auth_state";
 
-function base64UrlEncode(str: string): string {
-  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
 export function redirectToTelegramBot(botUsername: string) {
   if (!browser) return;
   if (!botUsername) {
     console.warn("Telegram bot username not provided");
     return;
   }
-  const state = crypto.randomUUID().replace(/-/g, "");
+  const state = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
   sessionStorage.setItem(TELEGRAM_AUTH_STATE_KEY, state);
-  const callbackUrl = `${window.location.origin}/auth/telegram-callback`;
-  const encodedCallback = base64UrlEncode(callbackUrl);
-  window.location.href = `https://t.me/${botUsername}?start=webauth_${state}_${encodedCallback}`;
+  window.location.href = `https://t.me/${botUsername}?start=webauth_${state}`;
 }
 
 export function handleTelegramCallback(token: string, state: string): boolean {
