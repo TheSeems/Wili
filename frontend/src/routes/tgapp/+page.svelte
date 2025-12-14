@@ -5,23 +5,7 @@
   import type { components } from "$lib/api/generated/wishlist-api";
   import { wishlistApi } from "$lib/api/wishlist-client";
   import { _, locale } from "svelte-i18n";
-  import { Button } from "$lib/components/ui/button";
-  import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-  } from "$lib/components/ui/card";
-  import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-  } from "$lib/components/ui/dropdown-menu";
-  import ExpandableText from "$lib/components/ExpandableText.svelte";
-  import { Textarea } from "$lib/components/ui/textarea";
-  import { Input } from "$lib/components/ui/input";
+  import { Card, CardContent } from "$lib/components/ui/card";
   import {
     saveBookingToken,
     getBookingToken,
@@ -30,22 +14,11 @@
   import { showSuccessAlert, showInfoAlert } from "$lib/utils/alerts";
   import { authStore } from "$lib/stores/auth";
   import { exchangeTelegramInitData } from "$lib/auth";
-  import WiliLogo from "$lib/components/WiliLogo.svelte";
-  import {
-    Loader2Icon,
-    LinkIcon,
-    CheckIcon,
-    XIcon,
-    ShieldOffIcon,
-    EditIcon,
-    SaveIcon,
-    PlusIcon,
-    SendIcon,
-    TrashIcon,
-    ArrowLeftIcon,
-    EllipsisVerticalIcon,
-    EyeIcon,
-  } from "@lucide/svelte";
+  import { Loader2Icon, LinkIcon } from "@lucide/svelte";
+  import TgAppHome from "./TgAppHome.svelte";
+  import WishlistHeader from "./WishlistHeader.svelte";
+  import WishlistItemCard from "./WishlistItemCard.svelte";
+  import AddItemForm from "./AddItemForm.svelte";
 
   type Wishlist = components["schemas"]["Wishlist"];
   type WishlistItem = components["schemas"]["WishlistItem"];
@@ -55,28 +28,16 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
 
-  let bookingItemId: string | null = $state(null);
-  let anonymous = $state(false);
-  let message = $state("");
   let defaultName: string | null = $state(null);
   let telegramAuthAttempted = $state(false);
   let telegramLoginLoading = $state(false);
   let telegramLoginAvailable = $state(false);
   let telegramInitData = $state("");
   let creatingWishlist = $state(false);
-  let editingWishlist = $state(false);
-  let editTitle = $state("");
-  let editDescription = $state("");
-  let addingItem = $state(false);
-  let newItemName = $state("");
-  let newItemDescription = $state("");
-  let editingItemId = $state<string | null>(null);
-  let editItemName = $state("");
-  let editItemDescription = $state("");
-  let savingItem = $state(false);
-  let deletingItemId = $state<string | null>(null);
   let deletingWishlist = $state(false);
+  let deletingItemId = $state<string | null>(null);
   let revealedBookings = $state<Set<string>>(new Set());
+
   const telegramBotUsername = env.PUBLIC_TELEGRAM_BOT_USERNAME;
   let myWishlists: Wishlist[] = $state([]);
   let myWishlistsLoading = $state(false);
@@ -121,8 +82,6 @@
       loading = true;
       error = null;
       wishlist = await wishlistApi.getWishlist(listId, $authStore.token || undefined);
-      editTitle = wishlist?.title || "";
-      editDescription = wishlist?.description || "";
     } catch (err) {
       console.error("Failed to load wishlist", err);
       error = $_("tgapp.loadError");
@@ -146,59 +105,6 @@
       myWishlistsError = $_("wishlists.failedToLoad");
     } finally {
       myWishlistsLoading = false;
-    }
-  }
-
-  function startBooking(itemId: string) {
-    bookingItemId = itemId;
-    anonymous = defaultName ? false : true;
-    message = "";
-  }
-
-  function closeBooking() {
-    bookingItemId = null;
-    anonymous = false;
-    message = "";
-  }
-
-  function resolveBookerName(): string | undefined {
-    if (anonymous) return undefined;
-    return defaultName || undefined;
-  }
-
-  async function book(item: WishlistItem) {
-    if (!listId) return;
-    try {
-      const payload = {
-        bookerName: resolveBookerName(),
-        message: message.trim() || undefined,
-      };
-      const resp = await wishlistApi.bookItem(listId, item.id, payload);
-      saveBookingToken(listId, item.id, resp.cancellationToken);
-      await loadWishlist();
-      closeBooking();
-      showSuccessAlert($_("items.bookedSuccessfully"), undefined, "bottom-center");
-    } catch (err) {
-      console.error("Booking failed", err);
-      error = err instanceof Error ? err.message : $_("tgapp.bookFailed");
-    }
-  }
-
-  async function unbook(item: WishlistItem) {
-    if (!listId) return;
-    const token = getBookingToken(listId, item.id);
-    if (!token) {
-      error = $_("items.noCancellationToken");
-      return;
-    }
-    try {
-      await wishlistApi.unbookItemByToken(listId, item.id, token);
-      removeBookingToken(listId, item.id);
-      await loadWishlist();
-      showInfoAlert($_("items.bookingCancelled"), undefined, "bottom-center");
-    } catch (err) {
-      console.error("Unbook failed", err);
-      error = err instanceof Error ? err.message : $_("tgapp.unbookFailed");
     }
   }
 
@@ -233,7 +139,6 @@
       (fullName && usernameTag ? `${fullName} ${usernameTag}` : fullName || usernameTag) || null;
     if (resolved) {
       defaultName = resolved;
-      anonymous = false;
     }
   }
 
@@ -295,9 +200,6 @@
       setDefaultNameFromUser(hashUser);
       setLocaleFromTelegram(hashUser?.language_code);
     }
-    if (!defaultName) {
-      anonymous = true;
-    }
 
     if (!telegramAuthAttempted && !$authStore.token && telegramInitData) {
       telegramAuthAttempted = true;
@@ -348,81 +250,6 @@
     return revealedBookings.has(itemId);
   }
 
-  function startEditingItem(item: WishlistItem) {
-    editingItemId = item.id;
-    editItemName = item.data?.name || "";
-    editItemDescription = item.data?.description || "";
-  }
-
-  function cancelEditingItem() {
-    editingItemId = null;
-    editItemName = "";
-    editItemDescription = "";
-  }
-
-  async function saveItem(item: WishlistItem) {
-    if (!wishlist || !$authStore.token) return;
-    const name = editItemName.trim();
-    const description = editItemDescription.trim();
-    if (!name) return;
-
-    savingItem = true;
-    try {
-      await wishlistApi.updateWishlistItem(
-        wishlist.id,
-        item.id,
-        {
-          type: item.type,
-          data: {
-            name,
-            ...(description ? { description } : {}),
-          },
-        } as any,
-        $authStore.token
-      );
-      await loadWishlist();
-      cancelEditingItem();
-      showSuccessAlert($_("common.saved"), undefined, "bottom-center");
-    } catch (e) {
-      console.warn("update item failed", e);
-      showInfoAlert($_("items.failedToUpdate"), undefined, "bottom-center");
-    } finally {
-      savingItem = false;
-    }
-  }
-
-  async function deleteItem(item: WishlistItem) {
-    if (!wishlist || !$authStore.token) return;
-    deletingItemId = item.id;
-    try {
-      await wishlistApi.deleteWishlistItem(wishlist.id, item.id, $authStore.token);
-      await loadWishlist();
-      if (editingItemId === item.id) cancelEditingItem();
-      showSuccessAlert($_("common.deleted"), undefined, "bottom-center");
-    } catch (e) {
-      console.warn("delete item failed", e);
-      showInfoAlert($_("items.failedToDelete"), undefined, "bottom-center");
-    } finally {
-      deletingItemId = null;
-    }
-  }
-
-  async function saveWishlistEdits() {
-    if (!wishlist || !$authStore.token) return;
-    try {
-      wishlist = await wishlistApi.updateWishlist(
-        wishlist.id,
-        { title: editTitle, description: editDescription },
-        $authStore.token
-      );
-      editingWishlist = false;
-      showSuccessAlert($_("common.saved"), undefined, "bottom-center");
-    } catch (e) {
-      console.warn("wishlist update failed", e);
-      showInfoAlert($_("wishlists.failedToUpdate"), undefined, "bottom-center");
-    }
-  }
-
   function shareWishlistToTelegram() {
     if (!wishlist) return;
     const tg = (window as any)?.Telegram?.WebApp;
@@ -458,10 +285,6 @@
       await wishlistApi.deleteWishlist(wishlist.id, $authStore.token);
       wishlist = null;
       listId = null;
-      editingWishlist = false;
-      addingItem = false;
-      editingItemId = null;
-      bookingItemId = null;
       myWishlistsToken = null;
       void loadMyWishlists();
       showSuccessAlert($_("tgapp.wishlistDeleted"), undefined, "bottom-center");
@@ -473,31 +296,106 @@
     }
   }
 
-  async function addItem() {
+  async function saveWishlistEdits(title: string, description: string) {
     if (!wishlist || !$authStore.token) return;
-    const name = newItemName.trim();
-    const description = newItemDescription.trim();
-    if (!name) return;
+    try {
+      wishlist = await wishlistApi.updateWishlist(wishlist.id, { title, description }, $authStore.token);
+      showSuccessAlert($_("common.saved"), undefined, "bottom-center");
+    } catch (e) {
+      console.warn("wishlist update failed", e);
+      showInfoAlert($_("wishlists.failedToUpdate"), undefined, "bottom-center");
+    }
+  }
+
+  async function addItem(name: string, description: string) {
+    if (!wishlist || !$authStore.token) return;
     try {
       await wishlistApi.addWishlistItem(
         wishlist.id,
         {
           type: "general",
-          data: {
-            name,
-            ...(description ? { description } : {}),
-          },
+          data: { name, ...(description ? { description } : {}) },
         } as any,
         $authStore.token
       );
-      newItemName = "";
-      newItemDescription = "";
-      addingItem = false;
       await loadWishlist();
       showSuccessAlert($_("items.addedSuccessfully"), undefined, "bottom-center");
     } catch (e) {
       console.warn("add item failed", e);
       showInfoAlert($_("items.failedToAdd"), undefined, "bottom-center");
+    }
+  }
+
+  async function saveItem(item: WishlistItem, name: string, description: string) {
+    if (!wishlist || !$authStore.token) return;
+    try {
+      await wishlistApi.updateWishlistItem(
+        wishlist.id,
+        item.id,
+        {
+          type: item.type,
+          data: { name, ...(description ? { description } : {}) },
+        } as any,
+        $authStore.token
+      );
+      await loadWishlist();
+      showSuccessAlert($_("common.saved"), undefined, "bottom-center");
+    } catch (e) {
+      console.warn("update item failed", e);
+      showInfoAlert($_("items.failedToUpdate"), undefined, "bottom-center");
+      throw e;
+    }
+  }
+
+  async function deleteItem(item: WishlistItem) {
+    if (!wishlist || !$authStore.token) return;
+    deletingItemId = item.id;
+    try {
+      await wishlistApi.deleteWishlistItem(wishlist.id, item.id, $authStore.token);
+      await loadWishlist();
+      showSuccessAlert($_("common.deleted"), undefined, "bottom-center");
+    } catch (e) {
+      console.warn("delete item failed", e);
+      showInfoAlert($_("items.failedToDelete"), undefined, "bottom-center");
+    } finally {
+      deletingItemId = null;
+    }
+  }
+
+  async function bookItem(item: WishlistItem, anonymous: boolean, message: string) {
+    if (!listId) return;
+    try {
+      const bookerName = anonymous ? undefined : defaultName || undefined;
+      const resp = await wishlistApi.bookItem(listId, item.id, {
+        bookerName,
+        message: message || undefined,
+      });
+      saveBookingToken(listId, item.id, resp.cancellationToken);
+      await loadWishlist();
+      showSuccessAlert($_("items.bookedSuccessfully"), undefined, "bottom-center");
+    } catch (e) {
+      console.warn("booking failed", e);
+      showInfoAlert($_("tgapp.bookFailed"), undefined, "bottom-center");
+      throw e;
+    }
+  }
+
+  async function unbookItem(item: WishlistItem) {
+    if (!listId) return;
+    const token = getBookingToken(listId, item.id);
+    if (!token) {
+      error = $_("items.noCancellationToken");
+      return;
+    }
+    try {
+      await wishlistApi.unbookItemByToken(listId, item.id, token);
+      removeBookingToken(listId, item.id);
+      await loadWishlist();
+      showInfoAlert($_("items.bookingCancelled"), undefined, "bottom-center");
+    } catch (e) {
+      console.warn("unbook failed", e);
+      showInfoAlert($_("tgapp.unbookFailed"), undefined, "bottom-center");
+      throw e;
     }
   }
 
@@ -511,8 +409,6 @@
       showSuccessAlert($_("tgapp.wishlistCreated"), undefined, "bottom-center");
       wishlist = wl as Wishlist;
       listId = wl.id;
-      editTitle = wl.title;
-      editDescription = wl.description || "";
       error = null;
     } catch (e) {
       console.warn("create wishlist failed", e);
@@ -525,12 +421,14 @@
   function goBackToList() {
     listId = null;
     wishlist = null;
-    editingWishlist = false;
-    addingItem = false;
-    editingItemId = null;
-    bookingItemId = null;
     myWishlistsToken = null;
     void loadMyWishlists();
+  }
+
+  function selectWishlist(id: string) {
+    listId = id;
+    wishlist = null;
+    void loadWishlist();
   }
 </script>
 
@@ -551,386 +449,55 @@
       </CardContent>
     </Card>
   {:else if !listId}
-    <div class="flex flex-col items-center gap-6 py-10 text-center">
-      <div class="flex flex-col items-center gap-3">
-        <WiliLogo className="h-14 w-auto" />
-        <p class="text-muted-foreground max-w-sm text-sm leading-relaxed">
-          {#if $authStore.token}
-            {$_("tgapp.homeCreatePrompt", { values: { name: $authStore.user?.displayName || "" } })}
-          {:else if telegramLoginAvailable}
-            {$_("tgapp.homeLoginPrompt")}
-          {:else}
-            {$_("tgapp.openFromChat")}
-          {/if}
-        </p>
-      </div>
-
-      <div class="w-full max-w-sm space-y-2">
-        {#if !$authStore.token && telegramLoginAvailable}
-          <Button
-            disabled={telegramLoginLoading}
-            onclick={() => loginWithTelegram(true)}
-            class="w-full"
-          >
-            {telegramLoginLoading ? $_("common.loading") : $_("auth.loginWithTelegram")}
-          </Button>
-        {/if}
-        {#if $authStore.token}
-          <Button disabled={creatingWishlist} onclick={createMyWishlist} class="w-full">
-            {creatingWishlist ? $_("common.loading") : $_("tgapp.createWishlist")}
-          </Button>
-        {/if}
-      </div>
-
-      {#if $authStore.token}
-        <div class="w-full max-w-sm space-y-2 text-left">
-          {#if myWishlistsLoading}
-            <div class="text-muted-foreground text-center text-sm">{$_("common.loading")}</div>
-          {:else if myWishlistsError}
-            <div class="text-muted-foreground text-center text-sm">{myWishlistsError}</div>
-          {:else if myWishlists.length > 0}
-            {#each myWishlists.slice(0, 8) as w}
-              <button
-                type="button"
-                class="border-border hover:bg-muted flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left"
-                onclick={() => {
-                  listId = w.id;
-                  wishlist = null;
-                  void loadWishlist();
-                }}
-              >
-                <span class="truncate font-medium">{w.title}</span>
-                <span class="text-muted-foreground ml-3 text-sm">{w.items?.length || 0}</span>
-              </button>
-            {/each}
-          {:else}
-            <div class="text-muted-foreground text-center text-sm">
-              {$_("wishlists.noWishlists")}
-            </div>
-          {/if}
-        </div>
-      {/if}
-
-      <a
-        class="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm"
-        href="https://wili.me"
-        target="_blank"
-        rel="noreferrer"
-      >
-        <LinkIcon class="h-4 w-4" />
-        {$_("tgapp.openInBrowser")}
-      </a>
-    </div>
+    <TgAppHome
+      isLoggedIn={Boolean($authStore.token)}
+      userName={$authStore.user?.displayName || ""}
+      {telegramLoginAvailable}
+      {telegramLoginLoading}
+      {creatingWishlist}
+      wishlists={myWishlists}
+      wishlistsLoading={myWishlistsLoading}
+      wishlistsError={myWishlistsError}
+      onLogin={() => loginWithTelegram(true)}
+      onCreateWishlist={createMyWishlist}
+      onSelectWishlist={selectWishlist}
+    />
   {:else if wishlist}
-    <div class="flex items-center justify-between gap-2">
-      <Button variant="ghost" onclick={goBackToList} class="gap-2">
-        <ArrowLeftIcon class="h-4 w-4" />
-        {$_("common.back")}
-      </Button>
-      {#if telegramLoginAvailable && !$authStore.token}
-        <Button
-          variant="outline"
-          disabled={telegramLoginLoading}
-          onclick={() => loginWithTelegram(true)}
-        >
-          {telegramLoginLoading ? $_("common.loading") : $_("auth.loginWithTelegram")}
-        </Button>
-      {/if}
-    </div>
-    <div class="space-y-2">
-      {#if editingWishlist && isOwner()}
-        <div class="space-y-3">
-          <input
-            type="text"
-            bind:value={editTitle}
-            class="border-input bg-background w-full rounded-md border px-3 py-2 text-lg font-semibold outline-none focus:ring-2 focus:ring-ring"
-          />
-          <textarea
-            bind:value={editDescription}
-            rows="3"
-            class="border-input bg-background w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-          ></textarea>
-          <div class="flex gap-2">
-            <Button onclick={saveWishlistEdits} class="gap-2">
-              <SaveIcon class="h-4 w-4" />
-              {$_("common.save")}
-            </Button>
-            <Button
-              variant="outline"
-              onclick={() => {
-                editingWishlist = false;
-                editTitle = wishlist?.title || "";
-                editDescription = wishlist?.description || "";
-              }}
-            >
-              {$_("common.cancel")}
-            </Button>
-          </div>
-        </div>
-      {:else}
-        <div class="flex items-start justify-between gap-2">
-          <p class="text-xl font-semibold">{wishlist.title}</p>
-          <div class="flex shrink-0 items-center">
-            {#if isOwner()}
-              <button
-                type="button"
-                onclick={() => (editingWishlist = true)}
-                class="text-muted-foreground hover:text-foreground flex h-8 w-8 items-center justify-center rounded"
-              >
-                <EditIcon class="h-4 w-4" />
-              </button>
-            {/if}
-            <button
-              type="button"
-              onclick={shareWishlistToTelegram}
-              class="text-muted-foreground hover:text-foreground flex h-8 w-8 items-center justify-center rounded"
-            >
-              <SendIcon class="h-4 w-4" />
-            </button>
-            {#if isOwner()}
-              <DropdownMenu>
-                <DropdownMenuTrigger>
-                  <button
-                    type="button"
-                    class="text-muted-foreground hover:text-foreground flex h-8 w-8 items-center justify-center rounded"
-                  >
-                    <EllipsisVerticalIcon class="h-4 w-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onclick={deleteWishlist}
-                    disabled={deletingWishlist}
-                    class="text-destructive gap-2"
-                  >
-                    <TrashIcon class="h-4 w-4" />
-                    {$_("wishlists.deleteWishlist")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            {/if}
-          </div>
-        </div>
-        {#if wishlist.description}
-          <ExpandableText
-            content={wishlist.description}
-            className="text-sm text-muted-foreground"
-            maxHeight={200}
-            useResponsive={false}
-            allowYandexMarket={false}
-            smallOverflowThreshold={0}
-          />
-        {:else if isOwner()}
-          <button
-            type="button"
-            onclick={() => (editingWishlist = true)}
-            class="text-muted-foreground hover:text-foreground text-sm italic"
-          >
-            {$_("wishlists.descriptionPlaceholder")}
-          </button>
-        {/if}
-      {/if}
-    </div>
+    <WishlistHeader
+      {wishlist}
+      isOwner={isOwner()}
+      {deletingWishlist}
+      {telegramLoginAvailable}
+      {telegramLoginLoading}
+      isLoggedIn={Boolean($authStore.token)}
+      onGoBack={goBackToList}
+      onLogin={() => loginWithTelegram(true)}
+      onShare={shareWishlistToTelegram}
+      onDelete={deleteWishlist}
+      onSave={saveWishlistEdits}
+    />
 
     <div class="grid gap-4 md:grid-cols-2">
       {#each wishlist.items || [] as item}
-        <Card class="h-full">
-          <CardHeader class="relative">
-            <CardTitle class="line-clamp-2"
-              >{item.data?.name || $_("wishlists.untitledItem")}</CardTitle
-            >
-            {#if item.data?.description}
-              <CardDescription class="text-muted-foreground text-sm">
-                <ExpandableText
-                  content={item.data.description}
-                  className="text-sm text-muted-foreground"
-                  maxHeight={180}
-                  useResponsive={false}
-                  allowYandexMarket={false}
-                  smallOverflowThreshold={0}
-                />
-              </CardDescription>
-            {/if}
-            {#if isOwner()}
-              <div class="absolute right-4 top-4 flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="h-8 w-8 p-0"
-                  disabled={deletingItemId === item.id}
-                  onclick={() => startEditingItem(item)}
-                >
-                  <EditIcon class="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="text-destructive h-8 w-8 p-0"
-                  disabled={deletingItemId === item.id}
-                  onclick={() => deleteItem(item)}
-                >
-                  <TrashIcon class="h-4 w-4" />
-                </Button>
-              </div>
-            {/if}
-          </CardHeader>
-          <CardContent class="flex flex-col gap-3">
-            {#if editingItemId === item.id && isOwner()}
-              <div class="space-y-3">
-                <Input placeholder={$_("items.namePlaceholder")} bind:value={editItemName} />
-                <Textarea
-                  placeholder={$_("items.descriptionPlaceholder")}
-                  bind:value={editItemDescription}
-                />
-                <div class="flex gap-2">
-                  <Button
-                    class="gap-2"
-                    disabled={savingItem || !editItemName.trim()}
-                    onclick={() => saveItem(item)}
-                  >
-                    <SaveIcon class="h-4 w-4" />
-                    {savingItem ? $_("common.loading") : $_("common.save")}
-                  </Button>
-                  <Button variant="outline" onclick={cancelEditingItem}>
-                    <XIcon class="h-4 w-4" />
-                    {$_("common.cancel")}
-                  </Button>
-                </div>
-              </div>
-            {:else if isOwner()}
-              {#if isBookingRevealed(item.id)}
-                {#if item.booking}
-                  <div
-                    class="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-sm text-green-700 dark:text-green-300"
-                  >
-                    <div class="flex flex-col gap-1">
-                      <div class="flex items-center gap-2">
-                        <CheckIcon class="h-4 w-4 shrink-0" />
-                        <span>{$_("tgapp.alreadyBooked")}</span>
-                      </div>
-                      {#if item.booking.bookerName}
-                        <div class="text-sm text-green-700/80 dark:text-green-200/80">
-                          {item.booking.bookerName}
-                        </div>
-                      {/if}
-                    </div>
-                  </div>
-                {:else}
-                  <div class="text-muted-foreground px-1 py-2 text-center text-sm">
-                    {$_("items.itemNotBooked")}
-                  </div>
-                {/if}
-              {:else}
-                <button
-                  type="button"
-                  onclick={() => revealBooking(item.id)}
-                  class="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-2 rounded-md border border-dashed py-2 text-sm"
-                >
-                  <EyeIcon class="h-4 w-4" />
-                  {$_("items.revealBooking")}
-                </button>
-              {/if}
-            {:else if item.booking}
-              <div
-                class="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-sm text-green-700 dark:text-green-300"
-              >
-                <div class="flex flex-col gap-1">
-                  <div class="flex items-center gap-2">
-                    <CheckIcon class="h-4 w-4 shrink-0" />
-                    <span>{$_("tgapp.alreadyBooked")}</span>
-                  </div>
-                  {#if item.booking.bookerName}
-                    <div class="text-sm text-green-700/80 dark:text-green-200/80">
-                      {item.booking.bookerName}
-                    </div>
-                  {/if}
-                </div>
-                {#if listId && getBookingToken(listId, item.id)}
-                  <Button size="sm" variant="outline" onclick={() => unbook(item)}>
-                    <XIcon class="mr-2 h-4 w-4" />
-                    {$_("common.cancel")}
-                  </Button>
-                {/if}
-              </div>
-            {:else if bookingItemId === item.id}
-              <div class="space-y-3 px-1 py-1">
-                <label class="flex items-center gap-2 text-sm">
-                  {#if defaultName}
-                    <input type="checkbox" bind:checked={anonymous} />
-                    {$_("tgapp.bookAnonymously")}
-                  {:else}
-                    <span class="text-muted-foreground">
-                      {$_("tgapp.willBeAnonymous")}
-                    </span>
-                  {/if}
-                </label>
-                {#if !anonymous && defaultName}
-                  <div class="text-muted-foreground text-sm">
-                    {$_("tgapp.nameLabel")}: {defaultName}
-                  </div>
-                {/if}
-                <div class="space-y-2">
-                  <Input
-                    placeholder={$_("tgapp.messagePlaceholder")}
-                    bind:value={message}
-                    class="w-full text-sm"
-                  />
-                </div>
-                <div class="mt-3 flex gap-3">
-                  <Button class="gap-2" onclick={() => book(item)}>
-                    <CheckIcon class="h-4 w-4" />
-                    {$_("items.bookItem")}
-                  </Button>
-                  <Button variant="outline" onclick={closeBooking}>
-                    <XIcon class="h-4 w-4" />
-                    {$_("common.cancel")}
-                  </Button>
-                </div>
-              </div>
-            {:else}
-              <Button class="w-full gap-2" onclick={() => startBooking(item.id)}>
-                <ShieldOffIcon class="h-4 w-4" />
-                {$_("items.bookItem")}
-              </Button>
-            {/if}
-          </CardContent>
-        </Card>
+        <WishlistItemCard
+          {item}
+          listId={listId}
+          isOwner={isOwner()}
+          isBookingRevealed={isBookingRevealed(item.id)}
+          hasBookingToken={Boolean(getBookingToken(listId, item.id))}
+          {defaultName}
+          deleting={deletingItemId === item.id}
+          onRevealBooking={() => revealBooking(item.id)}
+          onBook={(anon, msg) => bookItem(item, anon, msg)}
+          onUnbook={() => unbookItem(item)}
+          onSave={(name, desc) => saveItem(item, name, desc)}
+          onDelete={() => deleteItem(item)}
+        />
       {/each}
     </div>
 
     {#if isOwner()}
-      {#if addingItem}
-        <Card>
-          <CardHeader>
-            <CardTitle>{$_("wishlists.addNewItem")}</CardTitle>
-          </CardHeader>
-          <CardContent class="flex flex-col gap-3">
-            <Input placeholder={$_("items.namePlaceholder")} bind:value={newItemName} />
-            <Textarea
-              placeholder={$_("items.descriptionPlaceholder")}
-              bind:value={newItemDescription}
-            />
-            <div class="flex gap-2">
-              <Button onclick={addItem} disabled={!newItemName.trim()} class="gap-2">
-                <PlusIcon class="h-4 w-4" />
-                {$_("common.add")}
-              </Button>
-              <Button variant="outline" onclick={() => (addingItem = false)}>
-                {$_("common.cancel")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      {:else}
-        <Button
-          variant="outline"
-          onclick={() => (addingItem = true)}
-          class="w-full gap-2"
-        >
-          <PlusIcon class="h-4 w-4" />
-          {$_("wishlists.addItem")}
-        </Button>
-      {/if}
+      <AddItemForm onAdd={addItem} />
     {/if}
 
     <div class="text-muted-foreground mt-2 flex justify-center text-sm">
