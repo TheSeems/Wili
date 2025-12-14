@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -709,14 +710,24 @@ func parseWebAuth(param string) (state string, callbackURL string, ok bool) {
 		return "", "", false
 	}
 	state = parts[0]
-	callbackURL, err := url.QueryUnescape(parts[1])
+	decoded, err := base64URLDecode(parts[1])
 	if err != nil {
 		return "", "", false
 	}
+	callbackURL = string(decoded)
 	if !strings.HasPrefix(callbackURL, "https://") && !strings.HasPrefix(callbackURL, "http://") {
 		return "", "", false
 	}
 	return state, callbackURL, true
+}
+
+func base64URLDecode(s string) ([]byte, error) {
+	s = strings.ReplaceAll(s, "-", "+")
+	s = strings.ReplaceAll(s, "_", "/")
+	if m := len(s) % 4; m != 0 {
+		s += strings.Repeat("=", 4-m)
+	}
+	return base64.StdEncoding.DecodeString(s)
 }
 
 func parseInlineQueryListID(query string) string {
