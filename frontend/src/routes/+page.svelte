@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import { onMount } from "svelte";
+  import { env } from "$env/dynamic/public";
   import { exchangeTelegramInitData, redirectToTelegramBot, JUST_LOGGED_IN_KEY } from "$lib/auth";
   import { authStore } from "$lib/stores/auth";
   import { makeAlert } from "$lib/stores/alerts";
@@ -64,7 +65,7 @@
       }
     }
     telegramLoginAvailable = Boolean(telegramInitData);
-    telegramBotLoginAvailable = Boolean(import.meta.env.VITE_TELEGRAM_BOT_USERNAME);
+    telegramBotLoginAvailable = Boolean(env.PUBLIC_TELEGRAM_BOT_USERNAME);
   });
 </script>
 
@@ -107,7 +108,7 @@
         </Button>
       {:else if telegramBotLoginAvailable}
         <Button
-          onclick={redirectToTelegramBot}
+          onclick={() => redirectToTelegramBot(env.PUBLIC_TELEGRAM_BOT_USERNAME || "")}
           class="mt-8 w-full border border-white/10 bg-black text-white hover:bg-black/90 sm:w-1/3"
           aria-label="Login with Telegram"
         >

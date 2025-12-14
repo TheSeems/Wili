@@ -109,7 +109,6 @@ jobs:
           --build-arg PUBLIC_TELEGRAM_BOT_USERNAME=wiliwishbot \
           --build-arg PUBLIC_TELEGRAM_WEBAPP_URL=https://tg.wili.me/tgapp \
           --build-arg VITE_YANDEX_CLIENT_ID=${{ secrets.YANDEX_CLIENT_ID }} \
-          --build-arg VITE_TELEGRAM_BOT_USERNAME=wiliwishbot \
           -t $YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }} .
         docker tag $YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }} $YC_REGISTRY/$YC_REGISTRY_ID/frontend:latest
         docker push $YC_REGISTRY/$YC_REGISTRY_ID/frontend:${{ github.sha }}

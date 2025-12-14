@@ -63,11 +63,10 @@ export function redirectToYandex() {
 
 export const TELEGRAM_AUTH_STATE_KEY = "wili_tg_auth_state";
 
-export function redirectToTelegramBot() {
+export function redirectToTelegramBot(botUsername: string) {
   if (!browser) return;
-  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string;
   if (!botUsername) {
-    console.warn("VITE_TELEGRAM_BOT_USERNAME not set");
+    console.warn("Telegram bot username not provided");
     return;
   }
   const state = crypto.randomUUID();
