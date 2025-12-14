@@ -70,18 +70,18 @@ export function redirectToTelegramBot(botUsername: string) {
     return;
   }
   const state = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
-  sessionStorage.setItem(TELEGRAM_AUTH_STATE_KEY, state);
+  localStorage.setItem(TELEGRAM_AUTH_STATE_KEY, state);
   window.location.href = `https://t.me/${botUsername}?start=webauth_${state}`;
 }
 
 export function handleTelegramCallback(token: string, state: string): boolean {
   if (!browser) return false;
-  const savedState = sessionStorage.getItem(TELEGRAM_AUTH_STATE_KEY);
+  const savedState = localStorage.getItem(TELEGRAM_AUTH_STATE_KEY);
   if (!savedState || savedState !== state) {
     console.warn("Telegram auth state mismatch");
     return false;
   }
-  sessionStorage.removeItem(TELEGRAM_AUTH_STATE_KEY);
+  localStorage.removeItem(TELEGRAM_AUTH_STATE_KEY);
 
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(JUST_LOGGED_IN_KEY, "true");
