@@ -24,7 +24,8 @@
     "deleted": "Deleted",
     "edit": "Edit",
     "add": "Add",
-    "back": "Back"
+    "back": "Back",
+    "backToHome": "Back to home"
   },
   "auth": {
     "anonymousViewing": "👀 You're viewing this wishlist anonymously.",
@@ -33,7 +34,11 @@
     "loginWithTelegram": "Login with Telegram",
     "authenticating": "Authenticating…",
     "redirectMessage": "If you are not redirected in a few seconds, please",
-    "clickHere": "click here"
+    "clickHere": "click here",
+    "telegramCallback": "Telegram Login",
+    "processingTelegramLogin": "Logging you in...",
+    "telegramCallbackMissingParams": "Invalid login link. Please try again.",
+    "telegramCallbackStateMismatch": "Session expired. Please try logging in again."
   },
   "wishlists": {
     "title": "My Wishlists",

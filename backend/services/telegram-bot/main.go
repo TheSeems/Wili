@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -198,6 +199,10 @@ const (
 	keyInlineMessage       = "inline.message"
 	keyInlineOpenDesc      = "inline.open.desc"
 	keyInlineOpenButton    = "inline.open.button"
+	keyWebAuthText         = "webauth.text"
+	keyWebAuthButton       = "webauth.button"
+	keyWebAuthNotLinked    = "webauth.not_linked"
+	keyWebAuthOpenMiniApp  = "webauth.open_miniapp"
 )
 
 var botDict = map[string]map[string]string{
@@ -224,6 +229,10 @@ var botDict = map[string]map[string]string{
 		keyInlineMessage:       "<b>«%s»</b>\n\n%s\n\nЕсли не работает кнопка, можно открыть в <a href=\"%s\">web</a>",
 		keyInlineOpenDesc:      "Открыть вишлист",
 		keyInlineOpenButton:    "Открыть вишлист",
+		keyWebAuthText:         "Нажмите кнопку ниже, чтобы войти в веб-версию Wili.\n\nКстати, вы можете пользоваться Wili прямо здесь, в Telegram!",
+		keyWebAuthButton:       "Войти на сайт",
+		keyWebAuthNotLinked:    "Чтобы войти на сайт через Telegram, сначала откройте Mini App и создайте аккаунт.",
+		keyWebAuthOpenMiniApp:  "Открыть Wili",
 	},
 	"en": {
 		keyMiniAppEntryText:    "Open Wili in Telegram Mini App.",
@@ -248,6 +257,10 @@ var botDict = map[string]map[string]string{
 		keyInlineMessage:       "<b>«%s»</b>\n\n%s\n\nIf the button doesn't work, open in <a href=\"%s\">web</a>",
 		keyInlineOpenDesc:      "Open wishlist",
 		keyInlineOpenButton:    "Open wishlist",
+		keyWebAuthText:         "Tap the button below to log in to Wili web.\n\nBy the way, you can use Wili right here in Telegram!",
+		keyWebAuthButton:       "Log in to website",
+		keyWebAuthNotLinked:    "To log in via Telegram, first open the Mini App and create an account.",
+		keyWebAuthOpenMiniApp:  "Open Wili",
 	},
 }
 
@@ -326,6 +339,15 @@ func (b *bot) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		log.Printf("webhook share: chat=%d start_param=%s list=%s", upd.Message.Chat.ID, startParam, shareListID)
 		if err := b.sendSharePrompt(ctx, upd.Message.Chat.ID, shareListID, upd.Message.From.LanguageCode); err != nil {
 			log.Printf("send share prompt failed: chat=%d list=%s err=%v", upd.Message.Chat.ID, shareListID, err)
+		}
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if state, callbackURL, ok := parseWebAuth(startParam); ok {
+		log.Printf("webhook webauth: chat=%d state=%s callback=%s", upd.Message.Chat.ID, state, callbackURL)
+		if err := b.sendWebAuth(ctx, upd.Message.Chat.ID, upd.Message.From.ID, state, callbackURL, upd.Message.From.LanguageCode); err != nil {
+			log.Printf("send webauth failed: chat=%d err=%v", upd.Message.Chat.ID, err)
 		}
 		w.WriteHeader(http.StatusOK)
 		return
@@ -677,6 +699,26 @@ func parseShareListID(param string) string {
 	return parseListID("list_" + id)
 }
 
+func parseWebAuth(param string) (state string, callbackURL string, ok bool) {
+	if !strings.HasPrefix(param, "webauth_") {
+		return "", "", false
+	}
+	rest := strings.TrimPrefix(param, "webauth_")
+	parts := strings.SplitN(rest, "_", 2)
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	state = parts[0]
+	callbackURL, err := url.QueryUnescape(parts[1])
+	if err != nil {
+		return "", "", false
+	}
+	if !strings.HasPrefix(callbackURL, "https://") && !strings.HasPrefix(callbackURL, "http://") {
+		return "", "", false
+	}
+	return state, callbackURL, true
+}
+
 func parseInlineQueryListID(query string) string {
 	q := strings.TrimSpace(query)
 	if q == "" {
@@ -820,6 +862,78 @@ func (b *bot) sendSharePrompt(ctx context.Context, chatID int64, listID string, 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("telegram sendMessage status %d", resp.StatusCode)
 	}
+	return nil
+}
+
+func (b *bot) sendWebAuth(ctx context.Context, chatID int64, telegramID int64, state string, callbackURL string, lang string) error {
+	jwt, err := b.fetchTelegramJWT(ctx, telegramID)
+	if err != nil {
+		log.Printf("webauth fetch JWT failed: telegram_id=%d err=%v", telegramID, err)
+		text := tr(lang, keyWebAuthNotLinked)
+		msg := sendMessageRequest{
+			ChatID:    chatID,
+			Text:      text,
+			ParseMode: "HTML",
+			ReplyMarkup: &inlineKeyboardMarkup{
+				InlineKeyboard: [][]inlineKeyboardButton{
+					{
+						{Text: tr(lang, keyWebAuthOpenMiniApp), WebApp: &webAppInfo{URL: b.cfg.webAppURL}},
+					},
+				},
+			},
+		}
+		body, _ := json.Marshal(msg)
+		req, _ := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", b.cfg.botToken), strings.NewReader(string(body)))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := b.client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		return nil
+	}
+
+	loginURL := fmt.Sprintf("%s?token=%s&state=%s", callbackURL, url.QueryEscape(jwt), url.QueryEscape(state))
+
+	text := tr(lang, keyWebAuthText)
+	msg := sendMessageRequest{
+		ChatID:    chatID,
+		Text:      text,
+		ParseMode: "HTML",
+		ReplyMarkup: &inlineKeyboardMarkup{
+			InlineKeyboard: [][]inlineKeyboardButton{
+				{
+					{Text: tr(lang, keyWebAuthButton), URL: loginURL},
+				},
+				{
+					{Text: tr(lang, keyWebAuthOpenMiniApp), WebApp: &webAppInfo{URL: b.cfg.webAppURL}},
+				},
+			},
+		},
+	}
+
+	body, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", b.cfg.botToken), strings.NewReader(string(body)))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := b.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bb, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("telegram sendMessage status %d body=%s", resp.StatusCode, strings.TrimSpace(string(bb)))
+	}
+	log.Printf("webauth sent: chat=%d state=%s", chatID, state)
 	return nil
 }
 

@@ -61,6 +61,48 @@ export function redirectToYandex() {
   window.location.href = url.toString();
 }
 
+export const TELEGRAM_AUTH_STATE_KEY = "wili_tg_auth_state";
+
+export function redirectToTelegramBot() {
+  if (!browser) return;
+  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string;
+  if (!botUsername) {
+    console.warn("VITE_TELEGRAM_BOT_USERNAME not set");
+    return;
+  }
+  const state = crypto.randomUUID();
+  sessionStorage.setItem(TELEGRAM_AUTH_STATE_KEY, state);
+  const callbackUrl = encodeURIComponent(`${window.location.origin}/auth/telegram-callback`);
+  window.location.href = `https://t.me/${botUsername}?start=webauth_${state}_${callbackUrl}`;
+}
+
+export function handleTelegramCallback(token: string, state: string): boolean {
+  if (!browser) return false;
+  const savedState = sessionStorage.getItem(TELEGRAM_AUTH_STATE_KEY);
+  if (!savedState || savedState !== state) {
+    console.warn("Telegram auth state mismatch");
+    return false;
+  }
+  sessionStorage.removeItem(TELEGRAM_AUTH_STATE_KEY);
+
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(JUST_LOGGED_IN_KEY, "true");
+
+  fetch(`${AUTH_API_BASE_URL}/users/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then((res) => (res.ok ? res.json() : Promise.reject()))
+    .then((user) => {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      authStore.set({ token, user, isLoading: false, justLoggedIn: true });
+    })
+    .catch(() => {
+      authStore.set({ token, user: null, isLoading: false, justLoggedIn: true });
+    });
+
+  return true;
+}
+
 export async function exchangeCode(code: string) {
   const redirectUri = browser ? `${window.location.origin}/auth/callback` : "";
   const body = { code, redirectUri };
