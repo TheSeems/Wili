@@ -797,9 +797,9 @@
                   </Button>
                 </div>
               </div>
-            {:else if item.booking}
-              {#if isOwner()}
-                {#if isBookingRevealed(item.id)}
+            {:else if isOwner()}
+              {#if isBookingRevealed(item.id)}
+                {#if item.booking}
                   <div
                     class="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-sm text-green-700 dark:text-green-300"
                   >
@@ -816,39 +816,43 @@
                     </div>
                   </div>
                 {:else}
-                  <button
-                    type="button"
-                    onclick={() => revealBooking(item.id)}
-                    class="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-2 rounded-md border border-dashed py-2 text-sm"
-                  >
-                    <EyeIcon class="h-4 w-4" />
-                    {$_("items.revealBooking")}
-                  </button>
+                  <div class="text-muted-foreground px-1 py-2 text-center text-sm">
+                    {$_("items.itemNotBooked")}
+                  </div>
                 {/if}
               {:else}
-                <div
-                  class="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-sm text-green-700 dark:text-green-300"
+                <button
+                  type="button"
+                  onclick={() => revealBooking(item.id)}
+                  class="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-2 rounded-md border border-dashed py-2 text-sm"
                 >
-                  <div class="flex flex-col gap-1">
-                    <div class="flex items-center gap-2">
-                      <CheckIcon class="h-4 w-4 shrink-0" />
-                      <span>{$_("tgapp.alreadyBooked")}</span>
-                    </div>
-                    {#if item.booking.bookerName}
-                      <div class="text-sm text-green-700/80 dark:text-green-200/80">
-                        {item.booking.bookerName}
-                      </div>
-                    {/if}
+                  <EyeIcon class="h-4 w-4" />
+                  {$_("items.revealBooking")}
+                </button>
+              {/if}
+            {:else if item.booking}
+              <div
+                class="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-sm text-green-700 dark:text-green-300"
+              >
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center gap-2">
+                    <CheckIcon class="h-4 w-4 shrink-0" />
+                    <span>{$_("tgapp.alreadyBooked")}</span>
                   </div>
-                  {#if listId && getBookingToken(listId, item.id)}
-                    <Button size="sm" variant="outline" onclick={() => unbook(item)}>
-                      <XIcon class="mr-2 h-4 w-4" />
-                      {$_("common.cancel")}
-                    </Button>
+                  {#if item.booking.bookerName}
+                    <div class="text-sm text-green-700/80 dark:text-green-200/80">
+                      {item.booking.bookerName}
+                    </div>
                   {/if}
                 </div>
-              {/if}
-            {:else if !isOwner() && bookingItemId === item.id}
+                {#if listId && getBookingToken(listId, item.id)}
+                  <Button size="sm" variant="outline" onclick={() => unbook(item)}>
+                    <XIcon class="mr-2 h-4 w-4" />
+                    {$_("common.cancel")}
+                  </Button>
+                {/if}
+              </div>
+            {:else if bookingItemId === item.id}
               <div class="space-y-3 px-1 py-1">
                 <label class="flex items-center gap-2 text-sm">
                   {#if defaultName}
@@ -883,7 +887,7 @@
                   </Button>
                 </div>
               </div>
-            {:else if !isOwner()}
+            {:else}
               <Button class="w-full gap-2" onclick={() => startBooking(item.id)}>
                 <ShieldOffIcon class="h-4 w-4" />
                 {$_("items.bookItem")}
